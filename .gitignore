@@ -1,0 +1,32 @@
+# Dipendenze
+node_modules/
+
+# Build e directory temporanee
+dist/
+dist-ssr/
+*.local
+
+# File di log (contengono token, percorsi e dati CLI)
+*.log
+firebase-debug.log*
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Variabili d'ambiente locali e credenziali riservate
+.env
+.env.*
+!.env.example
+*.pem
+*serviceAccountKey*.json
+*credentials*.json
+
+# File di sistema e cache editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln

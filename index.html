@@ -1,0 +1,604 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CosaFare - Pannello di Controllo Amministratore</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23CC5500'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>" />
+  
+  <!-- Font Google & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
+
+  <!-- Protocol Check -->
+  <script>
+    if (window.location.protocol === 'file:') {
+      alert("ATTENZIONE:\nNon aprire index.html direttamente dal file system (file://) poiché i browser bloccano l'accesso a Google OAuth e ai moduli web per motivi di sicurezza CORS.\n\nFai doppio clic sul file 'start.bat' per avviare il pannello su http://localhost:3000!");
+    }
+  </script>
+
+  <!-- Cache Control -->
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+  <meta http-equiv="Pragma" content="no-cache" />
+  <meta http-equiv="Expires" content="0" />
+
+  <!-- Chart.js Standalone Bundle (Zero dependencies) -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+  <link rel="stylesheet" href="style.css?v=20260928_2" />
+</head>
+<body>
+  <!-- Login Gate Modal / Overlay -->
+  <div id="authOverlay" class="auth-overlay active">
+    <div class="auth-card">
+      <div class="auth-header">
+        <div class="brand-badge">
+          <i class="fa-solid fa-shield-halved"></i>
+          <span>CosaFare Admin</span>
+        </div>
+        <h2>Accesso Riservato Amministratori</h2>
+        <p>Autenticati per accedere al monitoraggio, alle segnalazioni e alla messaggistica dell'applicazione CosaFare.</p>
+      </div>
+
+      <div id="authAlert" class="auth-alert hidden"></div>
+
+      <div class="google-login-container">
+        <p class="auth-instruction">Questo pannello è accessibile esclusivamente agli amministratori autorizzati. Effettua l'accesso con il tuo account Google:</p>
+
+        <button id="googleLoginBtn" class="btn btn-google btn-block btn-google-lg">
+          <svg class="google-icon" viewBox="0 0 24 24">
+            <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+            <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+            <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+            <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Main App Layout -->
+  <div class="app-layout">
+    <!-- Sidebar -->
+    <aside class="sidebar">
+      <div class="sidebar-header">
+        <div class="app-logo">
+          <div class="logo-icon">
+            <i class="fa-solid fa-calendar-check"></i>
+          </div>
+          <div class="logo-text">
+            <h1>CosaFare</h1>
+            <span class="badge-role">ADMIN PANEL</span>
+          </div>
+        </div>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item active" data-target="view-analytics">
+          <i class="fa-solid fa-chart-line"></i>
+          <span>Analytics App</span>
+        </button>
+        <button class="nav-item" data-target="view-reports">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Segnalazioni & Bug</span>
+          <span id="badgeReportsCount" class="nav-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-target="view-messages">
+          <i class="fa-solid fa-comments"></i>
+          <span>Messaggistica</span>
+          <span id="badgeUnreadChats" class="nav-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-target="view-requests">
+          <i class="fa-solid fa-user-check"></i>
+          <span>Richieste Enti</span>
+          <span id="badgeRequestsCount" class="nav-badge hidden">0</span>
+        </button>
+        <button class="nav-item" data-target="view-events">
+          <i class="fa-solid fa-calendar-days"></i>
+          <span>Catalogo Eventi</span>
+        </button>
+        <button class="nav-item" data-target="view-organizers">
+          <i class="fa-solid fa-building-user"></i>
+          <span>Lista Organizzatori</span>
+          <span id="badgeOrganizersCount" class="nav-badge hidden">0</span>
+        </button>
+      </nav>
+
+      <div class="sidebar-footer">
+        <div class="status-indicator">
+          <span class="status-dot"></span>
+          <span id="connectionStatusText">Connesso a Firebase</span>
+        </div>
+        <div class="admin-profile-compact">
+          <div class="admin-avatar" id="adminAvatar">A</div>
+          <div class="admin-info-text">
+            <span class="admin-name" id="adminName">Admin</span>
+            <span class="admin-email" id="adminEmailDisplay">admin@cosafare.it</span>
+          </div>
+          <button id="logoutBtn" class="btn-logout" title="Esci dall'account">
+            <i class="fa-solid fa-arrow-right-from-bracket"></i>
+          </button>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Main Content Area -->
+    <main class="main-content">
+      <!-- Top Bar -->
+      <header class="topbar">
+        <div class="topbar-title">
+          <h2 id="pageTitle">Analytics & Statistiche App</h2>
+          <p id="pageSubtitle">Monitoraggio in tempo reale dell'attività degli utenti e dell'engagement sull'app CosaFare</p>
+        </div>
+        <div class="topbar-actions">
+          <button id="refreshDataBtn" class="btn btn-secondary btn-sm" title="Aggiorna Dati">
+            <i class="fa-solid fa-rotate"></i>
+            <span>Aggiorna</span>
+          </button>
+          <div class="live-pill">
+            <span class="pulsing-dot"></span>
+            <span>Realtime RTDB</span>
+          </div>
+        </div>
+      </header>
+
+      <!-- View 1: Analytics -->
+      <section id="view-analytics" class="content-view active">
+        <!-- KPI Cards Row -->
+        <div class="kpi-grid">
+          <div class="kpi-card orange">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-users"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Utenti Registrati</span>
+              <h3 class="kpi-value" id="kpiRegisteredUsers">--</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-database"></i> Dati da /utenti</span>
+            </div>
+          </div>
+
+          <div class="kpi-card blue">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-user-secret"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Visitatori Ospite (Sessioni)</span>
+              <h3 class="kpi-value" id="kpiGuestUsers">--</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-chart-simple"></i> Sessioni non loggate</span>
+            </div>
+          </div>
+
+          <div class="kpi-card green">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Eventi Attivi</span>
+              <h3 class="kpi-value" id="kpiActiveEvents">--</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-location-dot"></i> A catalogo su CosaFare</span>
+            </div>
+          </div>
+
+          <div class="kpi-card purple">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-arrows-up-down"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Media Eventi Scrollati</span>
+              <h3 class="kpi-value" id="kpiAvgScroll">--</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-mobile-screen"></i> Per sessione in Home</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Charts Grid -->
+        <div class="charts-grid">
+          <!-- Chart 1: Tab Usage Frequency -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h4><i class="fa-solid fa-layer-group"></i> Frequenza di Utilizzo Schede App</h4>
+                <p>Numero di aperture registrate per ciascuna schermata principale</p>
+              </div>
+              <div class="chart-tag">5 SCHEDE</div>
+            </div>
+            <div class="chart-body">
+              <canvas id="tabFrequencyChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 2: Registered vs Guests -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h4><i class="fa-solid fa-pie-chart"></i> Rapporto Registrati vs Ospiti</h4>
+                <p>Distribuzione tra utenti autenticati e utenti anonimi/ospiti</p>
+              </div>
+            </div>
+            <div class="chart-body donut-chart-container">
+              <canvas id="userRatioChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 3: Scroll Events Trend in Home -->
+          <div class="chart-card span-2">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h4><i class="fa-solid fa-arrow-trend-up"></i> Andamento Profondità di Scroll in Home</h4>
+                <p>Media giornaliera di schede eventi visionate dagli utenti nella home feed</p>
+              </div>
+              <div class="chart-action-pill">Ultimi 7 Giorni</div>
+            </div>
+            <div class="chart-body">
+              <canvas id="scrollTrendChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 4: Events by Category -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h4><i class="fa-solid fa-tags"></i> Eventi per Categoria</h4>
+                <p>Distribuzione del catalogo eventi in tempo reale</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="categoryChart"></canvas>
+            </div>
+          </div>
+
+          <!-- Chart 5: Events by Province -->
+          <div class="chart-card">
+            <div class="chart-header">
+              <div class="chart-title-group">
+                <h4><i class="fa-solid fa-map-location-dot"></i> Eventi per Provincia</h4>
+                <p>Copertura geografica in Regione Toscana (10 province)</p>
+              </div>
+            </div>
+            <div class="chart-body">
+              <canvas id="provinceChart"></canvas>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 2: Reports & Bug Reports -->
+      <section id="view-reports" class="content-view">
+        <div class="reports-container">
+          <!-- Subtabs Header -->
+          <div class="reports-tabs-bar">
+            <div class="reports-nav-tabs">
+              <button class="tab-btn active" data-subtab="subtab-event-reports">
+                <i class="fa-solid fa-flag"></i> Segnalazioni Eventi
+                <span id="badgeSubtabEventReports" class="tab-pill">0</span>
+              </button>
+              <button class="tab-btn" data-subtab="subtab-bug-reports">
+                <i class="fa-solid fa-bug"></i> Bug Report App
+                <span id="badgeSubtabBugReports" class="tab-pill">0</span>
+              </button>
+            </div>
+            <div class="reports-actions">
+              <button id="btnNewTestReport" class="btn btn-secondary btn-sm">
+                <i class="fa-solid fa-plus"></i> Invia Report di Prova
+              </button>
+            </div>
+          </div>
+
+          <!-- Subtab 1: Event Reports -->
+          <div id="subtab-event-reports" class="subtab-content active">
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>Filtra Stato:</label>
+                <select id="filterEventReportStatus" class="form-select">
+                  <option value="ALL">Tutti gli stati</option>
+                  <option value="IN_ATTESA" selected>In Attesa</option>
+                  <option value="IN_REVISIONE">In Revisione</option>
+                  <option value="RISOLTO">Risolti</option>
+                  <option value="RESPINTO">Respinti</option>
+                </select>
+              </div>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchEventReports" placeholder="Cerca per titolo evento o motivo..." />
+              </div>
+            </div>
+
+            <div id="eventReportsList" class="reports-list">
+              <!-- Rendered via JS -->
+              <div class="empty-state">
+                <i class="fa-solid fa-clipboard-check"></i>
+                <p>Nessuna segnalazione di eventi trovata.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Subtab 2: Bug Reports -->
+          <div id="subtab-bug-reports" class="subtab-content">
+            <div class="filter-bar">
+              <div class="filter-group">
+                <label>Stato:</label>
+                <select id="filterBugStatus" class="form-select">
+                  <option value="ALL">Tutti</option>
+                  <option value="APERTO" selected>Aperti</option>
+                  <option value="IN_LAVORAZIONE">In Lavorazione</option>
+                  <option value="RISOLTO">Risolti</option>
+                </select>
+              </div>
+              <div class="search-box">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="searchBugReports" placeholder="Cerca descrizione o dispositivo..." />
+              </div>
+            </div>
+
+            <div id="bugReportsList" class="reports-list">
+              <!-- Rendered via JS -->
+              <div class="empty-state">
+                <i class="fa-solid fa-bug-slash"></i>
+                <p>Nessun bug report attivo.</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 3: Messaging (Connected to App Chat) -->
+      <section id="view-messages" class="content-view">
+        <div class="chat-master-container">
+          <!-- Chat Sidebar (Room List) -->
+          <div class="chat-sidebar">
+            <div class="chat-sidebar-search">
+              <div class="search-box full-width">
+                <i class="fa-solid fa-magnifying-glass"></i>
+                <input type="text" id="chatSearchInput" placeholder="Cerca organizzatore o evento..." />
+              </div>
+            </div>
+
+            <div class="chat-filter-pills">
+              <button class="pill-btn active" data-chat-filter="ALL">Tutte</button>
+              <button class="pill-btn" data-chat-filter="ADMIN_ORGANIZZATORE">Supporto Admin</button>
+              <button class="pill-btn" data-chat-filter="EVENTO">Chat Eventi</button>
+            </div>
+
+            <div class="chat-rooms-list" id="chatRoomsList">
+              <!-- Rooms rendered via JS -->
+              <div class="chat-loading">
+                <i class="fa-solid fa-circle-notch fa-spin"></i> Caricamento chat...
+              </div>
+            </div>
+
+            <div class="chat-sidebar-actions">
+              <button id="btnNewAdminChat" class="btn btn-primary btn-block btn-sm">
+                <i class="fa-solid fa-paper-plane"></i> Nuova Chat con Organizzatore
+              </button>
+            </div>
+          </div>
+
+          <!-- Chat Window -->
+          <div class="chat-main-window" id="chatMainWindow">
+            <!-- State 1: No Chat Selected -->
+            <div id="chatEmptyPlaceholder" class="chat-empty-state">
+              <div class="empty-icon-bubble">
+                <i class="fa-solid fa-comments"></i>
+              </div>
+              <h3>Seleziona una conversazione</h3>
+              <p>Scegli una chat dall'elenco a sinistra per visualizzare la cronologia dei messaggi scambiati tra utenti, organizzatori e amministrazione.</p>
+            </div>
+
+            <!-- State 2: Active Chat -->
+            <div id="chatActiveContainer" class="chat-active-container hidden">
+              <!-- Chat Header -->
+              <div class="chat-active-header">
+                <div class="chat-header-info">
+                  <div class="chat-avatar-lg" id="activeChatAvatar">O</div>
+                  <div>
+                    <h3 id="activeChatTitle">Nome Organizzatore</h3>
+                    <div class="chat-subinfo">
+                      <span id="activeChatBadge" class="badge-chat-type">Supporto Organizzatore</span>
+                      <span id="activeChatSubtext" class="chat-subtext">ID Chat: admin_org123</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="chat-header-actions">
+                  <button id="btnDeleteChatRoom" class="btn btn-danger-outline btn-sm" title="Elimina conversazione">
+                    <i class="fa-regular fa-trash-can"></i>
+                  </button>
+                </div>
+              </div>
+
+              <!-- Message History Body -->
+              <div class="chat-messages-body" id="chatMessagesBody">
+                <!-- Messages rendered via JS -->
+              </div>
+
+              <!-- Chat Input Bar -->
+              <form id="chatSendForm" class="chat-input-bar">
+                <div class="input-wrapper">
+                  <textarea id="chatInputText" placeholder="Scrivi una risposta ufficiale come Amministrazione CosaFare..." rows="1" required></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary btn-send" id="btnSendMessage" title="Invia Messaggio">
+                  <i class="fa-solid fa-paper-plane"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 4: Requests (Richieste Organizzatori) -->
+      <section id="view-requests" class="content-view">
+        <div class="requests-view-header">
+          <div>
+            <h3>Richieste di Abilitazione Organizzatore</h3>
+            <p>Esamina e approva gli utenti che hanno inviato richiesta per diventare enti organizzatori sull'app.</p>
+          </div>
+          <div class="requests-summary-badge" id="requestsPendingSummary">
+            In attesa: <strong>0</strong>
+          </div>
+        </div>
+
+        <div id="requestsListContainer" class="requests-grid">
+          <!-- Requests rendered via JS -->
+          <div class="empty-state">
+            <i class="fa-solid fa-check-double"></i>
+            <p>Nessuna richiesta organizzatore in attesa al momento.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 5: Events Catalog -->
+      <section id="view-events" class="content-view">
+        <div class="events-view-header">
+          <div>
+            <h3>Catalogo Eventi CosaFare</h3>
+            <p>Tutti gli eventi attualmente registrati sul database Firebase di CosaFare.</p>
+          </div>
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchEventsInput" placeholder="Cerca per titolo, organizzatore o comune..." />
+          </div>
+        </div>
+
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Titolo Evento</th>
+                <th>Organizzatore</th>
+                <th>Categoria</th>
+                <th>Luogo / Comune</th>
+                <th>Data</th>
+                <th>Recensioni</th>
+                <th>Azioni</th>
+              </tr>
+            </thead>
+            <tbody id="eventsTableBody">
+              <!-- Rendered via JS -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- View 6: Organizers List (with Bios and Delete actions) -->
+      <section id="view-organizers" class="content-view">
+        <div class="organizers-view-header">
+          <div>
+            <h3>Elenco Enti Organizzatori</h3>
+            <p>Visualizza le informazioni degli enti, le rispettive biografie e gestisci l'eventuale rimozione o revoca dei privilegi.</p>
+          </div>
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchOrganizersInput" placeholder="Cerca per nome ente o biografia..." />
+          </div>
+        </div>
+
+        <div id="organizersGrid" class="organizers-grid">
+          <!-- Rendered via JS -->
+          <div class="empty-state">
+            <i class="fa-solid fa-users-slash"></i>
+            <p>Nessun organizzatore trovato.</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- Modal: Nuova Chat Organizzatore -->
+  <div id="modalNewChat" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-comment-medical"></i> Nuova Chat di Assistenza</h4>
+        <button class="modal-close" data-close-modal="modalNewChat">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Seleziona Organizzatore:</label>
+          <select id="selectOrganizerForChat" class="form-select">
+            <option value="">Seleziona un ente organizzatore...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Primo Messaggio dall'Amministrazione:</label>
+          <textarea id="initialAdminMessage" class="form-control" rows="3" placeholder="Es: Ciao! Ti contattiamo dallo staff di CosaFare in merito al tuo evento..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalNewChat">Annulla</button>
+        <button id="btnConfirmStartChat" class="btn btn-primary">Avvia Conversazione</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Test Report & Bug Creator -->
+  <div id="modalTestReport" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <h4><i class="fa-solid fa-plus-circle"></i> Crea Segnalazione / Bug di Prova</h4>
+        <button class="modal-close" data-close-modal="modalTestReport">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="form-group">
+          <label>Tipo Segnalazione:</label>
+          <select id="testReportType" class="form-select">
+            <option value="EVENT">Segnalazione Evento</option>
+            <option value="BUG">Bug Report App</option>
+          </select>
+        </div>
+
+        <div id="groupTestEventFields">
+          <div class="form-group">
+            <label>Titolo Evento Coinvolto:</label>
+            <input type="text" id="testEventTitle" class="form-control" placeholder="Es. Concerto in Piazza dei Signori" />
+          </div>
+          <div class="form-group">
+            <label>Motivo Segnalazione:</label>
+            <select id="testEventReason" class="form-select">
+              <option value="Informazioni errate o fuorvianti">Informazioni errate o fuorvianti</option>
+              <option value="Evento annullato non aggiornato">Evento annullato non aggiornato</option>
+              <option value="Spam / Contenuto inappropriato">Spam / Contenuto inappropriato</option>
+              <option value="Violazione diritti d'autore">Violazione diritti d'autore</option>
+              <option value="Altro">Altro</option>
+            </select>
+          </div>
+        </div>
+
+        <div id="groupTestBugFields" class="hidden">
+          <div class="form-group">
+            <label>Titolo del Problema:</label>
+            <input type="text" id="testBugTitle" class="form-control" placeholder="Es. Crash all'apertura della mappa su Android 14" />
+          </div>
+          <div class="form-group">
+            <label>Gravità:</label>
+            <select id="testBugSeverity" class="form-select">
+              <option value="BASSA">Bassa</option>
+              <option value="MEDIA" selected>Media</option>
+              <option value="ALTA">Alta</option>
+              <option value="CRITICA">Critica</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Dispositivo:</label>
+            <input type="text" id="testBugDevice" class="form-control" value="Pixel 7 - Android 14 (App v1.2.0)" />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Descrizione Dettagliata:</label>
+          <textarea id="testReportDesc" class="form-control" rows="3" placeholder="Dettagli e note della segnalazione..."></textarea>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalTestReport">Annulla</button>
+        <button id="btnSubmitTestReport" class="btn btn-primary">Salva su Firebase</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Container -->
+  <div id="toastContainer" class="toast-container"></div>
+
+  <!-- Application Logic -->
+  <script type="module" src="app.js?v=20260928_2"></script>
+</body>
+</html>
