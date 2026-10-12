@@ -30,21 +30,18 @@ Offre un'interfaccia a doppio ruolo con autenticazione Google unificata:
 
 ## 🚀 Avvio Rapido
 
-### Metodo 1: Doppio Clic su `start.bat` (Consigliato per Windows)
-Fai doppio clic sul file [`start.bat`](start.bat).  
-Avvierà automaticamente il server locale su `http://localhost:3000` e aprirà il browser predefinito.
-
-### Metodo 2: Con Python
-```bash
-python -m http.server 3000
-```
-Apri poi il browser all'indirizzo `http://localhost:3000`.
-
-### Metodo 3: Con Vite / Node.js
+### Metodo 1: Con Vite / Node.js (Consigliato)
 ```bash
 npm install
 npm run dev
 ```
+Avvierà il server locale e aprirà la dashboard su `http://localhost:3000`.
+
+### Metodo 2: Con Python HTTP Server
+```bash
+python -m http.server 3000
+```
+Apri poi il browser all'indirizzo `http://localhost:3000`.
 
 ---
 

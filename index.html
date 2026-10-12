@@ -15,7 +15,7 @@
   <!-- Protocol Check -->
   <script>
     if (window.location.protocol === 'file:') {
-      alert("ATTENZIONE:\nNon aprire index.html direttamente dal file system (file://) poiché i browser bloccano l'accesso a Google OAuth e ai moduli web per motivi di sicurezza CORS.\n\nFai doppio clic sul file 'start.bat' per avviare il pannello su http://localhost:3000!");
+      alert("ATTENZIONE:\nNon aprire index.html direttamente dal file system (file://) poiché i browser bloccano l'accesso a Google OAuth e ai moduli web per motivi di sicurezza CORS.\n\nAvvia un server locale (es. 'npm run dev' o 'python -m http.server 3000') e apri http://localhost:3000!");
     }
   </script>
 

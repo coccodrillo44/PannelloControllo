@@ -563,7 +563,7 @@ googleLoginBtn.addEventListener('click', async () => {
   hideAuthAlert();
 
   if (window.location.protocol === 'file:') {
-    showAuthAlert("Attenzione: Non puoi effettuare il login aprendo index.html direttamente dal file system (file://). Avvia 'start.bat' e accedi da http://localhost:3000", "error");
+    showAuthAlert("Attenzione: Non puoi effettuare il login aprendo index.html direttamente dal file system (file://). Avvia un server locale ('npm run dev') e accedi da http://localhost:3000", "error");
     return;
   }
 
