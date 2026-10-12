@@ -27,7 +27,7 @@
   <!-- Chart.js Standalone Bundle (Zero dependencies) -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-  <link rel="stylesheet" href="style.css?v=20260928_2" />
+  <link rel="stylesheet" href="style.css?v=20261012_org" />
 </head>
 <body>
   <!-- Login Gate Modal / Overlay -->
@@ -35,17 +35,17 @@
     <div class="auth-card">
       <div class="auth-header">
         <div class="brand-badge">
-          <i class="fa-solid fa-shield-halved"></i>
-          <span>CosaFare Admin</span>
+          <i class="fa-solid fa-layer-group"></i>
+          <span>CosaFare Portal</span>
         </div>
-        <h2>Accesso Riservato Amministratori</h2>
-        <p>Autenticati per accedere al monitoraggio, alle segnalazioni e alla messaggistica dell'applicazione CosaFare.</p>
+        <h2>Accesso Riservato</h2>
+        <p>Autenticati con il tuo account Google per accedere al pannello di Amministrazione o all'Area Organizzatore di CosaFare.</p>
       </div>
 
       <div id="authAlert" class="auth-alert hidden"></div>
 
       <div class="google-login-container">
-        <p class="auth-instruction">Questo pannello è accessibile esclusivamente agli amministratori autorizzati. Effettua l'accesso con il tuo account Google:</p>
+        <p class="auth-instruction">Effettua l'accesso con il tuo account Google autorizzato:</p>
 
         <button id="googleLoginBtn" class="btn btn-google btn-block btn-google-lg">
           <svg class="google-icon" viewBox="0 0 24 24">
@@ -54,13 +54,14 @@
             <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
             <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
           </svg>
+          <span>Accedi con Google</span>
         </button>
       </div>
     </div>
   </div>
 
-  <!-- Main App Layout -->
-  <div class="app-layout">
+  <!-- Main App Layout (Hidden by default until successful authenticated role check) -->
+  <div id="appLayout" class="app-layout" style="display: none;">
     <!-- Sidebar -->
     <aside class="sidebar">
       <div class="sidebar-header">
@@ -70,40 +71,78 @@
           </div>
           <div class="logo-text">
             <h1>CosaFare</h1>
-            <span class="badge-role">ADMIN PANEL</span>
+            <span class="badge-role" id="sidebarRoleBadge">PORTALE</span>
           </div>
+        </div>
+        <!-- Role switcher if user has both Admin and Organizer access -->
+        <div id="roleSwitcherContainer" class="role-switcher-container hidden">
+          <button id="btnSwitchRole" class="btn-role-switch" title="Cambia visualizzazione">
+            <i class="fa-solid fa-arrows-rotate"></i>
+            <span id="roleSwitchBtnText">Passa a Organizzatore</span>
+          </button>
         </div>
       </div>
 
       <nav class="sidebar-nav">
-        <button class="nav-item active" data-target="view-analytics">
-          <i class="fa-solid fa-chart-line"></i>
-          <span>Analytics App</span>
-        </button>
-        <button class="nav-item" data-target="view-reports">
-          <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>Segnalazioni & Bug</span>
-          <span id="badgeReportsCount" class="nav-badge hidden">0</span>
-        </button>
-        <button class="nav-item" data-target="view-messages">
-          <i class="fa-solid fa-comments"></i>
-          <span>Messaggistica</span>
-          <span id="badgeUnreadChats" class="nav-badge hidden">0</span>
-        </button>
-        <button class="nav-item" data-target="view-requests">
-          <i class="fa-solid fa-user-check"></i>
-          <span>Richieste Enti</span>
-          <span id="badgeRequestsCount" class="nav-badge hidden">0</span>
-        </button>
-        <button class="nav-item" data-target="view-events">
-          <i class="fa-solid fa-calendar-days"></i>
-          <span>Catalogo Eventi</span>
-        </button>
-        <button class="nav-item" data-target="view-organizers">
-          <i class="fa-solid fa-building-user"></i>
-          <span>Lista Organizzatori</span>
-          <span id="badgeOrganizersCount" class="nav-badge hidden">0</span>
-        </button>
+        <!-- 1. Admin Nav Group -->
+        <div id="adminNavGroup" class="nav-group">
+          <div class="nav-group-title">AMMINISTRAZIONE</div>
+          <button class="nav-item active" data-target="view-analytics">
+            <i class="fa-solid fa-chart-line"></i>
+            <span>Analytics App</span>
+          </button>
+          <button class="nav-item" data-target="view-reports">
+            <i class="fa-solid fa-triangle-exclamation"></i>
+            <span>Segnalazioni & Bug</span>
+            <span id="badgeReportsCount" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-item" data-target="view-messages">
+            <i class="fa-solid fa-comments"></i>
+            <span>Messaggistica</span>
+            <span id="badgeUnreadChats" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-item" data-target="view-requests">
+            <i class="fa-solid fa-user-check"></i>
+            <span>Richieste Enti</span>
+            <span id="badgeRequestsCount" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-item" data-target="view-events">
+            <i class="fa-solid fa-calendar-days"></i>
+            <span>Catalogo Eventi</span>
+          </button>
+          <button class="nav-item" data-target="view-organizers">
+            <i class="fa-solid fa-building-user"></i>
+            <span>Lista Organizzatori</span>
+            <span id="badgeOrganizersCount" class="nav-badge hidden">0</span>
+          </button>
+        </div>
+
+        <!-- 2. Organizer Nav Group -->
+        <div id="organizerNavGroup" class="nav-group hidden">
+          <div class="nav-group-title">AREA ORGANIZZATORE</div>
+          <button class="nav-item" data-target="view-org-analytics">
+            <i class="fa-solid fa-chart-pie"></i>
+            <span>Analytics Post</span>
+          </button>
+          <button class="nav-item" data-target="view-org-create-event">
+            <i class="fa-solid fa-circle-plus"></i>
+            <span>Carica Evento</span>
+          </button>
+          <button class="nav-item" data-target="view-org-my-events">
+            <i class="fa-solid fa-calendar-check"></i>
+            <span>I Miei Eventi</span>
+            <span id="badgeOrgMyEventsCount" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-item" data-target="view-org-chat">
+            <i class="fa-solid fa-headset"></i>
+            <span>Supporto Admin</span>
+            <span id="badgeOrgSupportChat" class="nav-badge hidden">0</span>
+          </button>
+          <button class="nav-item" data-target="view-org-profile">
+            <i class="fa-solid fa-id-card"></i>
+            <span>Profilo Ente</span>
+          </button>
+        </div>
       </nav>
 
       <div class="sidebar-footer">
@@ -501,6 +540,651 @@
           </div>
         </div>
       </section>
+
+      <!-- ================================================================== -->
+      <!-- ORGANIZER AREA VIEWS                                               -->
+      <!-- ================================================================== -->
+
+      <!-- View 7: Organizer Analytics Post & Events -->
+      <section id="view-org-analytics" class="content-view">
+        <div class="org-analytics-header">
+          <div>
+            <h3>Analytics Post & Interazioni</h3>
+            <p>Monitora in tempo reale le reazioni, i mi piace, le recensioni e l'engagement dei tuoi eventi pubblicati su CosaFare.</p>
+          </div>
+          <button id="btnOrgCreateEventShortcut" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Nuova Pubblicazione
+          </button>
+        </div>
+
+        <!-- KPI Grid for Organizer -->
+        <div class="kpi-grid">
+          <div class="kpi-card orange">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-calendar-check"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">I Tuoi Eventi</span>
+              <h3 class="kpi-value" id="kpiOrgTotalEvents">0</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-layer-group"></i> Post attivi & storici</span>
+            </div>
+          </div>
+
+          <div class="kpi-card red">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-heart"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Totale Mi Piace</span>
+              <h3 class="kpi-value" id="kpiOrgTotalLikes">0</h3>
+              <span class="kpi-hint"><i class="fa-regular fa-bookmark"></i> Salvati nei preferiti</span>
+            </div>
+          </div>
+
+          <div class="kpi-card purple">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-comments"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Recensioni Ricevute</span>
+              <h3 class="kpi-value" id="kpiOrgTotalReviews">0</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-pen-nib"></i> Feedback dagli utenti</span>
+            </div>
+          </div>
+
+          <div class="kpi-card yellow">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-star"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Media Valutazioni</span>
+              <h3 class="kpi-value" id="kpiOrgAvgRating">--</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-medal"></i> Punteggio reputazione</span>
+            </div>
+          </div>
+
+          <div class="kpi-card blue">
+            <div class="kpi-icon">
+              <i class="fa-solid fa-bolt"></i>
+            </div>
+            <div class="kpi-details">
+              <span class="kpi-label">Interazioni Diverse</span>
+              <h3 class="kpi-value" id="kpiOrgTotalInteractions">0</h3>
+              <span class="kpi-hint"><i class="fa-solid fa-chart-simple"></i> Mi piace + Recensioni + Click</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Chart Section: Posts Engagement Comparison -->
+        <div class="chart-card org-chart-engagement-card">
+          <div class="chart-header">
+            <div>
+              <h4><i class="fa-solid fa-chart-column"></i> Confronto Engagement Post & Eventi</h4>
+              <p>Panoramica comparativa di Mi Piace, Recensioni e Interazioni per ciascun evento</p>
+            </div>
+          </div>
+          <div class="chart-body" style="height: 320px;">
+            <canvas id="orgPostsEngagementChart"></canvas>
+          </div>
+        </div>
+
+        <!-- Detailed Table of Organizer Posts -->
+        <div class="org-analytics-table-section">
+          <div class="events-view-header">
+            <div>
+              <h3><i class="fa-solid fa-list-check"></i> Elenco Post ed Eventi con Dettaglio Metriche</h3>
+              <p>Analisi puntuale per singolo evento: consulta i Mi Piace, leggi le recensioni dei partecipanti e gestisci la pubblicazione.</p>
+            </div>
+            <div class="search-box">
+              <i class="fa-solid fa-magnifying-glass"></i>
+              <input type="text" id="searchOrgEventsInput" placeholder="Cerca tra i tuoi eventi..." />
+            </div>
+          </div>
+
+          <div class="table-responsive">
+            <table class="data-table">
+              <thead>
+                <tr>
+                  <th>Evento & Categoria</th>
+                  <th>Date & Luogo</th>
+                  <th>Mi Piace ❤️</th>
+                  <th>Recensioni 💬</th>
+                  <th>Media Voto ⭐</th>
+                  <th>Interazioni ⚡</th>
+                  <th>Caratteristiche</th>
+                  <th>Azioni</th>
+                </tr>
+              </thead>
+              <tbody id="orgEventsAnalyticsTableBody">
+                <!-- Rendered dynamically via JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 8: Create Event (Homologous to AddEvento.kt) -->
+      <section id="view-org-create-event" class="content-view">
+        <div class="create-event-header">
+          <div>
+            <h3>Carica Nuovo Evento</h3>
+            <p>Compila i campi sottostanti per pubblicare immediatamente un nuovo evento nell'applicazione mobile CosaFare.</p>
+          </div>
+        </div>
+
+        <div class="create-event-card">
+          <form id="formCreateEvent" class="form-create-event">
+            <div class="form-grid-2col">
+              <!-- Titolo Evento -->
+              <div class="form-group full-width">
+                <label for="ceTitolo"><i class="fa-solid fa-heading"></i> Titolo Evento <span class="required">*</span></label>
+                <input type="text" id="ceTitolo" class="form-control" placeholder="Es: Sagra del Cinghiale e dei Funghi Porcini" required />
+              </div>
+
+              <!-- Ente Organizzatore (Automatico) -->
+              <div class="form-group">
+                <label for="ceOrganizzatore"><i class="fa-solid fa-building"></i> Ente Organizzatore</label>
+                <input type="text" id="ceOrganizzatore" class="form-control" readonly />
+              </div>
+
+              <!-- Macro Categoria -->
+              <div class="form-group">
+                <label for="ceCategoria"><i class="fa-solid fa-tags"></i> Macro Categoria <span class="required">*</span></label>
+                <select id="ceCategoria" class="form-select" required>
+                  <option value="">Seleziona una categoria...</option>
+                  <option value="Cibo & Sagre">🍴 Cibo & Sagre</option>
+                  <option value="Musica & Feste">🎵 Musica & Feste</option>
+                  <option value="Arte & Cultura">🎨 Arte & Cultura</option>
+                  <option value="Sport & Movimento">⚽ Sport & Movimento</option>
+                  <option value="Famiglia & Bambini">🎈 Famiglia & Bambini</option>
+                  <option value="Fiere & Mercati">🛍️ Fiere & Mercati</option>
+                  <option value="Nuove Aperture">✨ Nuove Aperture</option>
+                </select>
+              </div>
+
+              <!-- Gestione Date Rivisitata -->
+              <div class="form-group full-width date-mode-container">
+                <div class="date-section-header">
+                  <label class="section-subheading"><i class="fa-regular fa-calendar-days"></i> Data / Periodo dell'Evento <span class="required">*</span></label>
+                  <!-- Segmented Control Switcher -->
+                  <div class="date-segmented-control" role="tablist">
+                    <button type="button" class="segmented-btn active" id="btnDateModeSingle" data-mode="single">
+                      <i class="fa-regular fa-calendar-check"></i> Singola Giornata
+                    </button>
+                    <button type="button" class="segmented-btn" id="btnDateModeRange" data-mode="range">
+                      <i class="fa-solid fa-calendar-week"></i> Periodo (Più Giorni)
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Hidden radio storage for compatibility -->
+                <input type="radio" name="ceDateType" id="radioDateSingle" value="single" checked style="display: none;" />
+                <input type="radio" name="ceDateType" id="radioDateRange" value="range" style="display: none;" />
+
+                <!-- Single Date Card Box -->
+                <div id="ceSingleDateRow" class="date-picker-card-wrapper">
+                  <div class="date-card-fancy">
+                    <div class="date-card-icon">
+                      <i class="fa-regular fa-calendar-days"></i>
+                    </div>
+                    <div class="date-card-content">
+                      <span class="date-card-title">Giorno dell'Evento</span>
+                      <input type="date" id="ceDataSingola" class="form-control date-input-modern" />
+                    </div>
+                  </div>
+                  <div class="date-quick-chips">
+                    <span class="quick-chip-label">Scelta rapida:</span>
+                    <button type="button" class="btn-chip" data-quick="today">Oggi</button>
+                    <button type="button" class="btn-chip" data-quick="tomorrow">Domani</button>
+                    <button type="button" class="btn-chip" data-quick="saturday">Questo Sabato</button>
+                    <button type="button" class="btn-chip" data-quick="sunday">Questa Domenica</button>
+                  </div>
+                  <div id="ceSingleDatePreview" class="date-preview-badge hidden">
+                    <i class="fa-solid fa-calendar-day"></i> Data evento: <strong id="ceSingleDatePreviewText">--</strong>
+                  </div>
+                </div>
+
+                <!-- Range Date Card Box -->
+                <div id="ceRangeDateRow" class="date-picker-card-wrapper hidden">
+                  <div class="date-range-cards-group">
+                    <div class="date-card-fancy range-start">
+                      <div class="date-card-icon">
+                        <i class="fa-solid fa-play"></i>
+                      </div>
+                      <div class="date-card-content">
+                        <span class="date-card-title">Data Inizio</span>
+                        <input type="date" id="ceDataInizio" class="form-control date-input-modern" />
+                      </div>
+                    </div>
+
+                    <div class="date-range-connector">
+                      <i class="fa-solid fa-arrow-right"></i>
+                      <span id="ceRangeDaysPill" class="range-days-pill hidden">0 gg</span>
+                    </div>
+
+                    <div class="date-card-fancy range-end">
+                      <div class="date-card-icon">
+                        <i class="fa-solid fa-flag-checkered"></i>
+                      </div>
+                      <div class="date-card-content">
+                        <span class="date-card-title">Data Fine</span>
+                        <input type="date" id="ceDataFine" class="form-control date-input-modern" />
+                      </div>
+                    </div>
+                  </div>
+                  <div id="ceRangeDatePreview" class="date-preview-badge hidden">
+                    <i class="fa-regular fa-calendar-days"></i> <strong id="ceRangeDatePreviewText">--</strong>
+                  </div>
+                </div>
+
+                <!-- Azione Aggiunta Periodo -->
+                <div class="period-action-bar">
+                  <button type="button" id="btnAddDatePeriod" class="btn btn-secondary btn-add-period">
+                    <i class="fa-solid fa-calendar-plus"></i> Inserisci Questo Periodo nella Lista
+                  </button>
+                  <span class="period-action-hint"><i class="fa-solid fa-circle-info"></i> Puoi aggiungere più periodi distinti (es. 10-12 e poi 18-20).</span>
+                </div>
+
+                <!-- Lista dei Periodi Aggiunti all'Evento -->
+                <div class="configured-periods-box">
+                  <div class="configured-periods-header">
+                    <label class="sub-label mb-0">
+                      <i class="fa-solid fa-calendar-check"></i> Calendario Date Evento (<span id="cePeriodsCountBadge">0 periodi</span>)
+                    </label>
+                  </div>
+                  <div id="ceConfiguredPeriodsList" class="configured-periods-list">
+                    <div class="empty-periods-msg" id="ceEmptyPeriodsPlaceholder">
+                      <i class="fa-regular fa-calendar-xmark"></i>
+                      <span>Nessuna data ancora aggiunta. Scegli la data o il periodo qui sopra e clicca su <strong>"Inserisci Questo Periodo nella Lista"</strong>.</span>
+                    </div>
+                  </div>
+                  <div id="ceTotalDaysSummary" class="periods-total-summary hidden">
+                    <i class="fa-solid fa-clock-rotate-left"></i>
+                    <span id="ceTotalDaysSummaryText">--</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Sezione Indirizzo con Autocompletamento e Verifica GPS -->
+              <div class="form-group full-width location-section-wrapper">
+                <div class="location-header-row">
+                  <div>
+                    <label class="section-subheading"><i class="fa-solid fa-location-dot"></i> Luogo & Indirizzo dell'Evento <span class="required">*</span></label>
+                    <p class="section-subtitle">Digita l'indirizzo per ottenere suggerimenti e verificare automaticamente le coordinate GPS.</p>
+                  </div>
+                </div>
+
+                <!-- Barra Autocompletamento Indirizzo (Nominatim OpenStreetMap) -->
+                <div class="address-autocomplete-container">
+                  <div class="autocomplete-input-box">
+                    <i class="fa-solid fa-magnifying-glass-location autocomplete-search-icon"></i>
+                    <input 
+                      type="text" 
+                      id="ceAddressSearch" 
+                      class="form-control address-search-input" 
+                      placeholder="Cerca via o piazza in Toscana (es: Piazza del Duomo Firenze, Via Fillungo Lucca...)" 
+                      autocomplete="off"
+                    />
+                    <button type="button" id="btnClearAddressSearch" class="btn-clear-search hidden" title="Cancella ricerca">
+                      <i class="fa-solid fa-xmark"></i>
+                    </button>
+                    <span id="ceSearchSpinner" class="search-spinner-icon hidden">
+                      <i class="fa-solid fa-circle-notch fa-spin"></i>
+                    </span>
+                  </div>
+                  <!-- Dropdown con i suggerimenti -->
+                  <div id="ceAddressSuggestions" class="address-suggestions-dropdown hidden"></div>
+                </div>
+
+                <!-- Badge Spunta Verde Coordinate Verificate -->
+                <div id="ceLocationVerifiedBadge" class="location-verified-card hidden">
+                  <div class="verified-icon-box">
+                    <i class="fa-solid fa-circle-check"></i>
+                  </div>
+                  <div class="verified-info">
+                    <div class="verified-title"><i class="fa-solid fa-shield-halved"></i> Posizione GPS Verificata con Successo!</div>
+                    <div class="verified-subtitle" id="ceLocationVerifiedText">Mappata con precisione per l'app mobile CosaFare</div>
+                  </div>
+                  <span class="verified-coords-badge" id="ceLocationVerifiedCoordsPill">--</span>
+                </div>
+
+                <!-- Hidden Inputs per Lat, Lng e Geohash (Niente più box tecnico grezzo) -->
+                <input type="hidden" id="ceLat" />
+                <input type="hidden" id="ceLng" />
+                <input type="hidden" id="ceGeohash" />
+
+                <!-- Dettagli Indirizzo (Via, Comune, Provincia) -->
+                <div class="location-fields-grid">
+                  <div class="form-group mb-0">
+                    <label for="ceVia"><i class="fa-solid fa-road"></i> Via / Piazza e N. Civico <span class="required">*</span></label>
+                    <input type="text" id="ceVia" class="form-control" placeholder="Es: Via Vittorio Veneto, 14" required />
+                  </div>
+
+                  <div class="form-group mb-0">
+                    <label for="ceComune"><i class="fa-solid fa-city"></i> Comune <span class="required">*</span></label>
+                    <input type="text" id="ceComune" class="form-control" placeholder="Es: San Miniato" required />
+                  </div>
+
+                  <div class="form-group mb-0">
+                    <label for="ceProvincia"><i class="fa-solid fa-map-location-dot"></i> Provincia Toscana <span class="required">*</span></label>
+                    <select id="ceProvincia" class="form-select" required>
+                      <option value="">Seleziona provincia...</option>
+                      <option value="Arezzo">Arezzo (AR)</option>
+                      <option value="Firenze">Firenze (FI)</option>
+                      <option value="Grosseto">Grosseto (GR)</option>
+                      <option value="Livorno">Livorno (LI)</option>
+                      <option value="Lucca">Lucca (LU)</option>
+                      <option value="Massa-Carrara">Massa-Carrara (MS)</option>
+                      <option value="Pisa">Pisa (PI)</option>
+                      <option value="Pistoia">Pistoia (PT)</option>
+                      <option value="Prato">Prato (PO)</option>
+                      <option value="Siena">Siena (SI)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Descrizione dell'Evento -->
+              <div class="form-group full-width">
+                <label for="ceDescrizione"><i class="fa-solid fa-align-left"></i> Descrizione Completa <span class="required">*</span></label>
+                <textarea id="ceDescrizione" class="form-control" rows="4" placeholder="Fornisci tutti i dettagli dell'evento: programma, artisti, stand gastronomici, informazioni di contatto..." required></textarea>
+              </div>
+
+              <!-- Immagine di Copertina -->
+              <div class="form-group upload-section">
+                <label><i class="fa-regular fa-image"></i> Immagine di Copertina <span class="optional">(Consigliata)</span></label>
+                <div class="file-dropzone" id="dropzoneCopertina">
+                  <input type="file" id="ceCopertinaFile" accept="image/*" class="file-input-hidden" />
+                  <div class="dropzone-content" id="dropzoneCopertinaPrompt">
+                    <i class="fa-solid fa-cloud-arrow-up"></i>
+                    <p>Clicca o trascina qui la copertina</p>
+                    <span class="file-hint">JPG, PNG o WEBP</span>
+                  </div>
+                  <div class="image-preview-wrapper hidden" id="ceCopertinaPreviewWrapper">
+                    <img id="ceCopertinaPreviewImg" src="" alt="Anteprima Copertina" />
+                    <button type="button" id="btnRemoveCopertina" class="btn-remove-preview" title="Rimuovi immagine">&times;</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Immagine Menu Gastronomico (Condizionale Cibo & Sagre) -->
+              <div class="form-group upload-section" id="groupCeMenuImage">
+                <label><i class="fa-solid fa-utensils"></i> Menu Gastronomico / Programma <span class="optional">(Opzionale)</span></label>
+                <div class="file-dropzone" id="dropzoneMenu">
+                  <input type="file" id="ceMenuFile" accept="image/*" class="file-input-hidden" />
+                  <div class="dropzone-content" id="dropzoneMenuPrompt">
+                    <i class="fa-solid fa-receipt"></i>
+                    <p>Carica foto del menu o locandina piatti</p>
+                    <span class="file-hint">Visibile nella sezione gastronomica</span>
+                  </div>
+                  <div class="image-preview-wrapper hidden" id="ceMenuPreviewWrapper">
+                    <img id="ceMenuPreviewImg" src="" alt="Anteprima Menu" />
+                    <button type="button" id="btnRemoveMenu" class="btn-remove-preview" title="Rimuovi menu">&times;</button>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Spunte Caratteristiche (Disabili e Opzioni Veg) -->
+              <div class="form-group full-width features-box">
+                <div class="features-box-header">
+                  <label><i class="fa-solid fa-square-check"></i> Informazioni & Servizi Aggiuntivi</label>
+                  <p class="sub-hint">Queste indicazioni compariranno con badge ed icone dedicate nella scheda dell'evento.</p>
+                </div>
+
+                <div class="checkbox-cards-grid">
+                  <!-- Spunta Disabili (Sempre presente) -->
+                  <div class="checkbox-card-item">
+                    <label class="custom-checkbox-container">
+                      <input type="checkbox" id="ceAccessibileDisabili" />
+                      <span class="checkmark"></span>
+                      <div class="checkbox-text">
+                        <span class="title"><i class="fa-solid fa-wheelchair" style="color: #3b82f6;"></i> Accessibile ai Disabili</span>
+                        <span class="desc">La location dispone di percorsi privi di barriere architettoniche e servizi dedicati.</span>
+                      </div>
+                    </label>
+                  </div>
+
+                  <!-- Spunta Vegetariano / Vegano (Condizionale per Cibo & Sagre) -->
+                  <div class="checkbox-card-item" id="groupCeOpzioniVeg">
+                    <label class="custom-checkbox-container">
+                      <input type="checkbox" id="ceOpzioniVeg" />
+                      <span class="checkmark"></span>
+                      <div class="checkbox-text">
+                        <span class="title"><i class="fa-solid fa-seedling" style="color: #10b981;"></i> Opzioni Vegetariane / Vegane</span>
+                        <span class="desc">Il menu gastronomico include piatti dedicati a chi segue una dieta vegetariana o vegana.</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Submit Button -->
+            <div class="form-submit-row">
+              <button type="submit" id="btnSubmitCreateEvent" class="btn btn-primary btn-lg">
+                <i class="fa-solid fa-paper-plane"></i> Pubblica Evento su CosaFare
+              </button>
+            </div>
+          </form>
+        </div>
+      </section>
+
+      <!-- View 9: Organizer My Events -->
+      <section id="view-org-my-events" class="content-view">
+        <div class="my-events-header">
+          <div>
+            <h3>I Miei Eventi</h3>
+            <p>Visualizza e gestisci tutti gli eventi pubblicati dal tuo ente.</p>
+          </div>
+          <button id="btnNewEventFromList" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Nuovo Evento
+          </button>
+        </div>
+
+        <div class="my-events-filter-bar">
+          <div class="pill-group" id="orgEventsStatusFilters">
+            <button class="pill-btn active" data-filter="ALL">Tutti gli Eventi</button>
+            <button class="pill-btn" data-filter="IN_CORSO">In Corso Oggi</button>
+            <button class="pill-btn" data-filter="FUTURI">Futuri</button>
+            <button class="pill-btn" data-filter="PASSATI">Passati</button>
+          </div>
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchMyEventsListInput" placeholder="Cerca tra i tuoi eventi..." />
+          </div>
+        </div>
+
+        <div id="orgMyEventsGrid" class="org-events-grid">
+          <!-- Rendered dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- View 10: Organizer Support Chat with Admin -->
+      <section id="view-org-chat" class="content-view">
+        <div class="org-chat-view-container">
+          <div class="chat-card org-chat-card">
+            <div class="org-chat-header">
+              <div class="chat-header-avatar">
+                <i class="fa-solid fa-headset"></i>
+              </div>
+              <div class="chat-header-info">
+                <h4>Supporto & Assistenza Amministrativa</h4>
+                <p>Team di Amministrazione CosaFare • Risposte in tempo reale</p>
+              </div>
+              <div class="live-pill">
+                <span class="pulsing-dot"></span>
+                <span>Assistenza Attiva</span>
+              </div>
+            </div>
+
+            <div class="chat-messages" id="orgChatMessagesBody">
+              <div class="empty-state" style="margin: auto;">
+                <i class="fa-regular fa-comments" style="font-size: 2.5rem;"></i>
+                <p>Benvenuto nel canale di supporto!<br>Invia un messaggio per contattare direttamente gli amministratori di CosaFare.</p>
+              </div>
+            </div>
+
+            <form class="org-chat-send-container" id="orgChatSendForm">
+              <textarea id="orgChatInputText" placeholder="Scrivi una richiesta o domanda per l'amministrazione di CosaFare..." rows="2" required></textarea>
+              <div class="org-chat-actions-bar">
+                <span class="chat-keyboard-hint">
+                  <i class="fa-regular fa-keyboard"></i> Premi <strong>Invio</strong> per inviare rapido
+                </span>
+                <button type="submit" id="btnOrgChatSend" class="btn btn-primary btn-chat-send-prominent" title="Invia messaggio">
+                  <i class="fa-solid fa-paper-plane"></i>
+                  <span>Invia Messaggio</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
+
+      <!-- View 11: Organizer Profile -->
+      <section id="view-org-profile" class="content-view">
+        <div class="org-profile-header">
+          <div>
+            <h3><i class="fa-solid fa-id-card"></i> Profilo Organizzatore</h3>
+            <p>Visualizza e gestisci le informazioni pubbliche e di contatto del tuo ente organizzatore su Rook.</p>
+          </div>
+        </div>
+
+        <div class="org-profile-container">
+          <!-- Banner / Identity Summary Card -->
+          <div class="org-profile-card org-profile-hero">
+            <div class="org-profile-avatar" id="orgProfileAvatar">
+              <span>O</span>
+            </div>
+            <div class="org-profile-hero-info">
+              <div class="org-title-row">
+                <h2 id="orgProfileDisplayNome">Nome Ente</h2>
+                <span class="badge-verified" id="orgProfileBadgeVerified">
+                  <i class="fa-solid fa-circle-check"></i> Verificato da <span id="orgProfileVerifiedDate">--/--/----</span>
+                </span>
+              </div>
+              <p class="org-hero-meta">
+                <span><i class="fa-solid fa-fingerprint"></i> ID: <strong id="orgProfileUid">---</strong></span>
+                <span><i class="fa-solid fa-envelope"></i> <span id="orgProfileDisplayEmail">---</span></span>
+                <span><i class="fa-solid fa-location-dot"></i> <span id="orgProfileDisplayLocation">Toscana</span></span>
+              </p>
+            </div>
+          </div>
+
+          <!-- Edit Form Card -->
+          <div class="org-profile-card">
+            <div class="card-header-styled">
+              <div class="card-header-title">
+                <i class="fa-solid fa-building"></i>
+                <h4>Dati e Recapiti dell'Ente</h4>
+              </div>
+              <span class="header-badge-hint">Sincronizzato in tempo reale con l'app mobile Rook</span>
+            </div>
+
+            <form id="orgProfileForm" class="org-profile-form">
+              <!-- Sezione 1: Identità Ente -->
+              <div class="org-form-section-title">
+                <i class="fa-solid fa-id-badge"></i>
+                <span>1. Identità & Denominazione Ufficiale</span>
+              </div>
+
+              <div class="form-grid-2col">
+                <!-- Nome Ente -->
+                <div class="form-group">
+                  <label for="opNomeEnte"><i class="fa-solid fa-building"></i> Nome Ente / Organizzazione <span class="required">*</span></label>
+                  <input type="text" id="opNomeEnte" class="form-control" placeholder="Es: Pro Loco Firenze, Associazione XYZ..." required />
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Nome visibile al pubblico sull'app nei dettagli di tutti i tuoi eventi.</span>
+                </div>
+
+                <!-- Referente -->
+                <div class="form-group">
+                  <label for="opReferente"><i class="fa-solid fa-user-tie"></i> Referente Responsabile</label>
+                  <input type="text" id="opReferente" class="form-control" placeholder="Es: Mario Rossi" />
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Persona o coordinatore di riferimento per comunicazioni istituzionali.</span>
+                </div>
+              </div>
+
+              <!-- Sezione 2: Contatti -->
+              <div class="org-form-section-title">
+                <i class="fa-solid fa-address-book"></i>
+                <span>2. Canali di Contatto Ufficiali</span>
+              </div>
+
+              <div class="form-grid-2col">
+                <!-- Email Ente -->
+                <div class="form-group">
+                  <label for="opEmailEnte"><i class="fa-solid fa-envelope"></i> Email Istituzionale <span class="required">*</span></label>
+                  <input type="email" id="opEmailEnte" class="form-control" placeholder="Es: info@enteorganizzatore.it" required />
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Indirizzo email usato per il profilo pubblico e per l'assistenza.</span>
+                </div>
+
+                <!-- Telefono Ente -->
+                <div class="form-group">
+                  <label for="opTelefonoEnte"><i class="fa-solid fa-phone"></i> Recapito Telefonico</label>
+                  <input type="tel" id="opTelefonoEnte" class="form-control" placeholder="Es: 055 1234567 oppure 333 1234567" />
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Numero di recapito telefonico dell'ufficio o della segreteria.</span>
+                </div>
+              </div>
+
+              <!-- Sezione 3: Territorio -->
+              <div class="org-form-section-title">
+                <i class="fa-solid fa-map-location-dot"></i>
+                <span>3. Sede & Appartenenza Territoriale</span>
+              </div>
+
+              <div class="form-grid-2col">
+                <!-- Città / Sede -->
+                <div class="form-group">
+                  <label for="opSede"><i class="fa-solid fa-city"></i> Città / Comune Sede</label>
+                  <input type="text" id="opSede" class="form-control" placeholder="Es: Firenze, Pisa, Siena..." />
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Comune toscano in cui l'ente ha la propria sede legale o operativa.</span>
+                </div>
+
+                <!-- Provincia Toscana -->
+                <div class="form-group">
+                  <label for="opProvincia"><i class="fa-solid fa-map-pin"></i> Provincia Toscana</label>
+                  <select id="opProvincia" class="form-select">
+                    <option value="">Seleziona provincia...</option>
+                    <option value="Arezzo">Arezzo (AR)</option>
+                    <option value="Firenze">Firenze (FI)</option>
+                    <option value="Grosseto">Grosseto (GR)</option>
+                    <option value="Livorno">Livorno (LI)</option>
+                    <option value="Lucca">Lucca (LU)</option>
+                    <option value="Massa-Carrara">Massa-Carrara (MS)</option>
+                    <option value="Pisa">Pisa (PI)</option>
+                    <option value="Pistoia">Pistoia (PT)</option>
+                    <option value="Prato">Prato (PO)</option>
+                    <option value="Siena">Siena (SI)</option>
+                  </select>
+                  <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Provincia di riferimento geografico per i filtri territoriali.</span>
+                </div>
+              </div>
+
+              <!-- Sezione 4: Bio -->
+              <div class="org-form-section-title">
+                <i class="fa-solid fa-pen-nib"></i>
+                <span>4. Presentazione Pubblica dell'Ente</span>
+              </div>
+
+              <!-- Descrizione / Bio Ente -->
+              <div class="form-group">
+                <label for="opDescrizione"><i class="fa-solid fa-align-left"></i> Biografia / Descrizione dell'Ente</label>
+                <textarea id="opDescrizione" class="form-control" rows="4" placeholder="Descrivi brevemente la tua organizzazione, le sue finalità e il tipo di eventi promossi sul territorio..."></textarea>
+                <span class="form-hint"><i class="fa-solid fa-circle-info"></i> Questa descrizione viene mostrata nella scheda organizzatore dell'app Rook.</span>
+              </div>
+
+              <!-- Action Bar -->
+              <div class="org-profile-actions">
+                <button type="button" id="btnResetOrgProfile" class="btn btn-secondary">
+                  <i class="fa-solid fa-rotate-left"></i> Ripristina Dati
+                </button>
+                <button type="submit" id="btnSaveOrgProfile" class="btn btn-primary">
+                  <i class="fa-solid fa-floppy-disk"></i> Salva Modifiche Profilo
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </section>
     </main>
   </div>
 
@@ -595,10 +1279,45 @@
     </div>
   </div>
 
+  <!-- Modal: Visualizza Recensioni di un Evento -->
+  <div id="modalEventReviews" class="modal-overlay hidden">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <div>
+          <h4 id="reviewModalTitle"><i class="fa-solid fa-comments"></i> Recensioni Evento</h4>
+          <p id="reviewModalSubtitle" class="modal-subtitle">Feedback e valutazioni fornite dai partecipanti</p>
+        </div>
+        <button class="modal-close" data-close-modal="modalEventReviews">&times;</button>
+      </div>
+      <div class="modal-body">
+        <!-- Review Aggregate Rating Banner -->
+        <div id="reviewAggregateBanner" class="review-aggregate-banner">
+          <div class="agg-score-box">
+            <span class="agg-score-num" id="reviewAggScore">0.0</span>
+            <div class="agg-stars" id="reviewAggStars">★★★★★</div>
+            <span class="agg-count-label" id="reviewAggCount">0 recensioni</span>
+          </div>
+          <div class="agg-info-text">
+            <h5>Valutazione Complessiva</h5>
+            <p>Le recensioni e i punteggi sono inviati dagli utenti autenticati attraverso l'app mobile CosaFare.</p>
+          </div>
+        </div>
+
+        <!-- Reviews List -->
+        <div id="reviewModalList" class="reviews-feed-list">
+          <!-- Rendered via JS -->
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalEventReviews">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Toast Container -->
   <div id="toastContainer" class="toast-container"></div>
 
   <!-- Application Logic -->
-  <script type="module" src="app.js?v=20260928_2"></script>
+  <script type="module" src="app.js?v=20261012_org"></script>
 </body>
 </html>
