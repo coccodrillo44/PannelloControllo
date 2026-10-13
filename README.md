@@ -1,4 +1,4 @@
-# 🏰 CosaFare & Rook — Portale Web di Controllo (Admin & Organizzatori)
+# 🏰 Rook — Portale Web di Controllo (Admin & Organizzatori)
 
 <div align="center">
 
@@ -9,7 +9,7 @@
 
 <br/>
 
-Portale web centralizzato per la piattaforma **CosaFare / Rook**.  
+Portale web centralizzato per la piattaforma **Rook**.  
 Offre un'interfaccia a doppio ruolo con autenticazione Google unificata:
 1. **Pannello di Amministrazione**: per monitorare KPI globali, gestire segnalazioni, approvare nuovi enti e comunicare con gli organizzatori.
 2. **Area Riservata Organizzatore**: per gli enti accreditati, con analytics dei propri post, caricamento eventi con periodi multipli, supporto diretto e gestione del profilo pubblico.
@@ -61,7 +61,7 @@ L'accesso avviene **esclusivamente tramite Google Sign-In** con rilevamento auto
    - Se un utente è registrato sia come Admin sia come Ente Organizzatore, compare un pulsante rapido **"Passa a Organizzatore" / "Passa ad Amministratore"** nella sidebar per commutare istantaneamente visualizzazione.
 
 4. **Inizializzazione Primo Amministratore**:
-   - Se il database è appena stato configurato: link *"Non sei ancora abilitato in /admins? Clicca qui"* con master key di sicurezza (`COSAFARE2026`).
+   - Se il database è appena stato configurato: link *"Non sei ancora abilitato in /admins? Clicca qui"* con master key di sicurezza (`ROOK2026`).
 
 ---
 
@@ -120,7 +120,7 @@ L'accesso avviene **esclusivamente tramite Google Sign-In** con rilevamento auto
 - Ricerca istantanea per titolo e cancellazione con pulizia automatica delle recensioni correlate.
 
 ### 4. Supporto Diretto Amministrazione
-- Canale di assistenza in tempo reale dedicato con lo staff amministrativo di CosaFare / Rook.
+- Canale di assistenza in tempo reale dedicato con lo staff amministrativo di Rook.
 - Invio messaggi con tasto Invio rapido e notifiche badge dei nuovi messaggi in arrivo.
 
 ### 5. Gestione Profilo Ente

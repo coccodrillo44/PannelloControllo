@@ -1,7 +1,7 @@
 {
-  "name": "cosafare-pannello-controllo",
+  "name": "rook-pannello-controllo",
   "version": "1.0.0",
-  "description": "Pannello di Controllo Amministratore Web per l'applicazione CosaFare",
+  "description": "Pannello di Controllo Amministratore Web per l'applicazione Rook",
   "main": "index.html",
   "scripts": {
     "dev": "vite",
@@ -9,8 +9,8 @@
     "preview": "vite preview",
     "start": "vite --open"
   },
-  "keywords": ["cosafare", "admin", "dashboard", "analytics", "chat", "reports"],
-  "author": "CosaFare Team",
+  "keywords": ["rook", "admin", "dashboard", "analytics", "chat", "reports"],
+  "author": "Rook Team",
   "license": "ISC",
   "devDependencies": {
     "vite": "^5.4.0"

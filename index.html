@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>CosaFare - Pannello di Controllo Amministratore</title>
+  <title>Rook - Pannello di Controllo Amministratore</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23CC5500'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>" />
   
   <!-- Font Google & Icons -->
@@ -36,10 +36,10 @@
       <div class="auth-header">
         <div class="brand-badge">
           <i class="fa-solid fa-layer-group"></i>
-          <span>CosaFare Portal</span>
+          <span>Rook Portal</span>
         </div>
         <h2>Accesso Riservato</h2>
-        <p>Autenticati con il tuo account Google per accedere al pannello di Amministrazione o all'Area Organizzatore di CosaFare.</p>
+        <p>Autenticati con il tuo account Google per accedere al pannello di Amministrazione o all'Area Organizzatore di Rook.</p>
       </div>
 
       <div id="authAlert" class="auth-alert hidden"></div>
@@ -70,7 +70,7 @@
             <i class="fa-solid fa-calendar-check"></i>
           </div>
           <div class="logo-text">
-            <h1>CosaFare</h1>
+            <h1>Rook</h1>
             <span class="badge-role" id="sidebarRoleBadge">PORTALE</span>
           </div>
         </div>
@@ -154,7 +154,7 @@
           <div class="admin-avatar" id="adminAvatar">A</div>
           <div class="admin-info-text">
             <span class="admin-name" id="adminName">Admin</span>
-            <span class="admin-email" id="adminEmailDisplay">admin@cosafare.it</span>
+            <span class="admin-email" id="adminEmailDisplay">admin@rook.it</span>
           </div>
           <button id="logoutBtn" class="btn-logout" title="Esci dall'account">
             <i class="fa-solid fa-arrow-right-from-bracket"></i>
@@ -169,7 +169,7 @@
       <header class="topbar">
         <div class="topbar-title">
           <h2 id="pageTitle">Analytics & Statistiche App</h2>
-          <p id="pageSubtitle">Monitoraggio in tempo reale dell'attività degli utenti e dell'engagement sull'app CosaFare</p>
+          <p id="pageSubtitle">Monitoraggio in tempo reale dell'attività degli utenti e dell'engagement sull'app Rook</p>
         </div>
         <div class="topbar-actions">
           <button id="refreshDataBtn" class="btn btn-secondary btn-sm" title="Aggiorna Dati">
@@ -216,7 +216,7 @@
             <div class="kpi-details">
               <span class="kpi-label">Eventi Attivi</span>
               <h3 class="kpi-value" id="kpiActiveEvents">--</h3>
-              <span class="kpi-hint"><i class="fa-solid fa-location-dot"></i> A catalogo su CosaFare</span>
+              <span class="kpi-hint"><i class="fa-solid fa-location-dot"></i> A catalogo su Rook</span>
             </div>
           </div>
 
@@ -454,7 +454,7 @@
               <!-- Chat Input Bar -->
               <form id="chatSendForm" class="chat-input-bar">
                 <div class="input-wrapper">
-                  <textarea id="chatInputText" placeholder="Scrivi una risposta ufficiale come Amministrazione CosaFare..." rows="1" required></textarea>
+                  <textarea id="chatInputText" placeholder="Scrivi una risposta ufficiale come Amministrazione Rook..." rows="1" required></textarea>
                 </div>
                 <button type="submit" class="btn btn-primary btn-send" id="btnSendMessage" title="Invia Messaggio">
                   <i class="fa-solid fa-paper-plane"></i>
@@ -490,8 +490,8 @@
       <section id="view-events" class="content-view">
         <div class="events-view-header">
           <div>
-            <h3>Catalogo Eventi CosaFare</h3>
-            <p>Tutti gli eventi attualmente registrati sul database Firebase di CosaFare.</p>
+            <h3>Catalogo Eventi Rook</h3>
+            <p>Tutti gli eventi attualmente registrati sul database Firebase di Rook.</p>
           </div>
           <div class="search-box">
             <i class="fa-solid fa-magnifying-glass"></i>
@@ -550,7 +550,7 @@
         <div class="org-analytics-header">
           <div>
             <h3>Analytics Post & Interazioni</h3>
-            <p>Monitora in tempo reale le reazioni, i mi piace, le recensioni e l'engagement dei tuoi eventi pubblicati su CosaFare.</p>
+            <p>Monitora in tempo reale le reazioni, i mi piace, le recensioni e l'engagement dei tuoi eventi pubblicati su Rook.</p>
           </div>
           <button id="btnOrgCreateEventShortcut" class="btn btn-primary btn-sm">
             <i class="fa-solid fa-plus"></i> Nuova Pubblicazione
@@ -668,7 +668,7 @@
         <div class="create-event-header">
           <div>
             <h3>Carica Nuovo Evento</h3>
-            <p>Compila i campi sottostanti per pubblicare immediatamente un nuovo evento nell'applicazione mobile CosaFare.</p>
+            <p>Compila i campi sottostanti per pubblicare immediatamente un nuovo evento nell'applicazione mobile Rook.</p>
           </div>
         </div>
 
@@ -843,7 +843,7 @@
                   </div>
                   <div class="verified-info">
                     <div class="verified-title"><i class="fa-solid fa-shield-halved"></i> Posizione GPS Verificata con Successo!</div>
-                    <div class="verified-subtitle" id="ceLocationVerifiedText">Mappata con precisione per l'app mobile CosaFare</div>
+                    <div class="verified-subtitle" id="ceLocationVerifiedText">Mappata con precisione per l'app mobile Rook</div>
                   </div>
                   <span class="verified-coords-badge" id="ceLocationVerifiedCoordsPill">--</span>
                 </div>
@@ -907,19 +907,19 @@
                 </div>
               </div>
 
-              <!-- Immagine Menu Gastronomico (Condizionale Cibo & Sagre) -->
+              <!-- Immagine Menu Gastronomico / Programma Evento (Obbligatorio per tutte le categorie) -->
               <div class="form-group upload-section" id="groupCeMenuImage">
-                <label><i class="fa-solid fa-utensils"></i> Menu Gastronomico / Programma <span class="optional">(Opzionale)</span></label>
+                <label id="lblCeMenu"><i id="iconCeMenu" class="fa-solid fa-file-lines"></i> <span id="lblCeMenuTitle">Programma dell'Evento</span> <span class="required">*</span></label>
                 <div class="file-dropzone" id="dropzoneMenu">
                   <input type="file" id="ceMenuFile" accept="image/*" class="file-input-hidden" />
                   <div class="dropzone-content" id="dropzoneMenuPrompt">
-                    <i class="fa-solid fa-receipt"></i>
-                    <p>Carica foto del menu o locandina piatti</p>
-                    <span class="file-hint">Visibile nella sezione gastronomica</span>
+                    <i id="iconDropzoneMenu" class="fa-solid fa-file-lines"></i>
+                    <p id="txtDropzoneMenu">Carica foto o locandina del programma</p>
+                    <span class="file-hint" id="hintDropzoneMenu">Visibile nella scheda dell'evento</span>
                   </div>
                   <div class="image-preview-wrapper hidden" id="ceMenuPreviewWrapper">
-                    <img id="ceMenuPreviewImg" src="" alt="Anteprima Menu" />
-                    <button type="button" id="btnRemoveMenu" class="btn-remove-preview" title="Rimuovi menu">&times;</button>
+                    <img id="ceMenuPreviewImg" src="" alt="Anteprima Menu / Programma" />
+                    <button type="button" id="btnRemoveMenu" class="btn-remove-preview" title="Rimuovi immagine">&times;</button>
                   </div>
                 </div>
               </div>
@@ -962,7 +962,7 @@
             <!-- Submit Button -->
             <div class="form-submit-row">
               <button type="submit" id="btnSubmitCreateEvent" class="btn btn-primary btn-lg">
-                <i class="fa-solid fa-paper-plane"></i> Pubblica Evento su CosaFare
+                <i class="fa-solid fa-paper-plane"></i> Pubblica Evento su Rook
               </button>
             </div>
           </form>
@@ -1009,7 +1009,7 @@
               </div>
               <div class="chat-header-info">
                 <h4>Supporto & Assistenza Amministrativa</h4>
-                <p>Team di Amministrazione CosaFare • Risposte in tempo reale</p>
+                <p>Team di Amministrazione Rook • Risposte in tempo reale</p>
               </div>
               <div class="live-pill">
                 <span class="pulsing-dot"></span>
@@ -1020,12 +1020,12 @@
             <div class="chat-messages" id="orgChatMessagesBody">
               <div class="empty-state" style="margin: auto;">
                 <i class="fa-regular fa-comments" style="font-size: 2.5rem;"></i>
-                <p>Benvenuto nel canale di supporto!<br>Invia un messaggio per contattare direttamente gli amministratori di CosaFare.</p>
+                <p>Benvenuto nel canale di supporto!<br>Invia un messaggio per contattare direttamente gli amministratori di Rook.</p>
               </div>
             </div>
 
             <form class="org-chat-send-container" id="orgChatSendForm">
-              <textarea id="orgChatInputText" placeholder="Scrivi una richiesta o domanda per l'amministrazione di CosaFare..." rows="2" required></textarea>
+              <textarea id="orgChatInputText" placeholder="Scrivi una richiesta o domanda per l'amministrazione di Rook..." rows="2" required></textarea>
               <div class="org-chat-actions-bar">
                 <span class="chat-keyboard-hint">
                   <i class="fa-regular fa-keyboard"></i> Premi <strong>Invio</strong> per inviare rapido
@@ -1204,7 +1204,7 @@
         </div>
         <div class="form-group">
           <label>Primo Messaggio dall'Amministrazione:</label>
-          <textarea id="initialAdminMessage" class="form-control" rows="3" placeholder="Es: Ciao! Ti contattiamo dallo staff di CosaFare in merito al tuo evento..."></textarea>
+          <textarea id="initialAdminMessage" class="form-control" rows="3" placeholder="Es: Ciao! Ti contattiamo dallo staff di Rook in merito al tuo evento..."></textarea>
         </div>
       </div>
       <div class="modal-footer">
@@ -1299,7 +1299,7 @@
           </div>
           <div class="agg-info-text">
             <h5>Valutazione Complessiva</h5>
-            <p>Le recensioni e i punteggi sono inviati dagli utenti autenticati attraverso l'app mobile CosaFare.</p>
+            <p>Le recensioni e i punteggi sono inviati dagli utenti autenticati attraverso l'app mobile Rook.</p>
           </div>
         </div>
 

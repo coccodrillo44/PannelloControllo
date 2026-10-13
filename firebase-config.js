@@ -1,4 +1,4 @@
-// Configurazione Firebase per il Pannello di Controllo di CosaFare
+// Configurazione Firebase per il Pannello di Controllo di Rook
 // Le credenziali client web Firebase identificano l'istanza del progetto lato client.
 // La sicurezza e la protezione dei dati sono gestite a monte dalle Firebase Security Rules e dai Domini Autorizzati OAuth.
 

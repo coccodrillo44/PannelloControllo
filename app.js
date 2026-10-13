@@ -1,5 +1,5 @@
 /**
- * CosaFare - Admin & Organizer Web Dashboard
+ * Rook - Admin & Organizer Web Dashboard
  * Fully integrated with Firebase Realtime Database and Firebase Auth
  */
 
@@ -440,7 +440,7 @@ onAuthStateChanged(auth, async (user) => {
 
     if (roleInfo.role === 'NONE') {
       const userIdentifier = user.email || user.uid;
-      showAuthAlert(`Accesso negato: L'account Google (${userIdentifier}) non è registrato né come Amministratore né come Ente Organizzatore autorizzato su CosaFare.`, 'error');
+      showAuthAlert(`Accesso negato: L'account Google (${userIdentifier}) non è registrato né come Amministratore né come Ente Organizzatore autorizzato su Rook.`, 'error');
       showToast(`Accesso negato: account non abilitato`, 'error');
       userExplicitlyClickedLogin = false;
       await signOut(auth);
@@ -503,7 +503,7 @@ function applyActiveRole(role) {
     }
 
     adminNameDisplay.textContent = currentUser?.displayName || 'Amministratore';
-    adminEmailDisplay.textContent = currentUser?.email || 'admin@cosafare.it';
+    adminEmailDisplay.textContent = currentUser?.email || 'admin@rook.it';
     adminAvatar.textContent = (currentUser?.displayName || currentUser?.email || 'A').charAt(0).toUpperCase();
 
     // Trigger first nav button in admin group
@@ -610,7 +610,7 @@ googleLoginBtn.addEventListener('click', async () => {
 
 // Logout Button Listener
 logoutBtn.addEventListener('click', async () => {
-  if (confirm('Vuoi davvero uscire dal portale CosaFare?')) {
+  if (confirm('Vuoi davvero uscire dal portale Rook?')) {
     userExplicitlyClickedLogin = false;
     await signOut(auth);
     window.location.reload();
@@ -624,7 +624,7 @@ logoutBtn.addEventListener('click', async () => {
 const viewTitles = {
   'view-analytics': {
     title: 'Analytics & Statistiche App',
-    subtitle: "Monitoraggio in tempo reale dell'attività degli utenti e dell'engagement sull'app CosaFare"
+    subtitle: "Monitoraggio in tempo reale dell'attività degli utenti e dell'engagement sull'app Rook"
   },
   'view-reports': {
     title: 'Segnalazioni & Bug Report',
@@ -640,7 +640,7 @@ const viewTitles = {
   },
   'view-events': {
     title: 'Catalogo Eventi Database',
-    subtitle: 'Panoramica completa di tutti gli eventi registrati su CosaFare'
+    subtitle: 'Panoramica completa di tutti gli eventi registrati su Rook'
   },
   'view-organizers': {
     title: 'Elenco Enti Organizzatori',
@@ -652,7 +652,7 @@ const viewTitles = {
   },
   'view-org-create-event': {
     title: 'Carica Nuovo Evento',
-    subtitle: 'Crea e pubblica un nuovo evento sul catalogo ufficiale di CosaFare'
+    subtitle: 'Crea e pubblica un nuovo evento sul catalogo ufficiale di Rook'
   },
   'view-org-my-events': {
     title: 'I Miei Eventi',
@@ -1380,7 +1380,7 @@ btnSubmitTestReport.addEventListener('click', async () => {
         titoloEvento: document.getElementById('testEventTitle').value.trim() || 'Festa della Primavera a Vicenza',
         motivo: document.getElementById('testEventReason').value,
         dettagli: desc,
-        segnalatoDa: currentAdminUser ? currentAdminUser.email : 'tester@cosafare.it',
+        segnalatoDa: currentAdminUser ? currentAdminUser.email : 'tester@rook.it',
         timestamp: Date.now(),
         stato: 'IN_ATTESA'
       });
@@ -1395,7 +1395,7 @@ btnSubmitTestReport.addEventListener('click', async () => {
         dispositivo: document.getElementById('testBugDevice').value.trim() || 'Android 14',
         versioneApp: '1.2.0',
         descrizione: desc,
-        emailUtente: currentAdminUser ? currentAdminUser.email : 'tester@cosafare.it',
+        emailUtente: currentAdminUser ? currentAdminUser.email : 'tester@rook.it',
         timestamp: Date.now(),
         stato: 'APERTO'
       });
@@ -1846,7 +1846,7 @@ function renderChatMessages(messages) {
   chatMessagesBody.innerHTML = messages.map((m) => {
     const isAdmin = m.senderRole === 'ADMIN';
     const senderDisplay = isAdmin 
-      ? 'Tu (Amministrazione CosaFare)' 
+      ? 'Tu (Amministrazione Rook)' 
       : `${m.senderName || 'Interlocutore'} (${m.senderRole || 'UTENTE'})`;
 
     return `
@@ -1883,7 +1883,7 @@ chatSendForm.addEventListener('submit', async (e) => {
       id: msgId,
       chatId: activeChatId,
       senderId: currentUid,
-      senderName: 'Amministrazione CosaFare',
+      senderName: 'Amministrazione Rook',
       senderRole: 'ADMIN',
       testo: text,
       timestamp: now
@@ -1962,7 +1962,7 @@ btnConfirmStartChat.addEventListener('click', async () => {
         id: newMsgRef.key,
         chatId: chatId,
         senderId: currentAdminUser ? currentAdminUser.uid : 'admin_web',
-        senderName: 'Amministrazione CosaFare',
+        senderName: 'Amministrazione Rook',
         senderRole: 'ADMIN',
         testo: initialText,
         timestamp: now
@@ -2353,7 +2353,7 @@ window.viewEventReviews = function(eventId) {
     listEl.innerHTML = `
       <div class="empty-state" style="padding: 2rem 1rem;">
         <i class="fa-regular fa-comment-dots" style="font-size: 2.5rem;"></i>
-        <p>Non ci sono ancora recensioni scritte per questo evento.<br>I partecipanti potranno recensirlo dall'app mobile CosaFare al termine della loro visita.</p>
+        <p>Non ci sono ancora recensioni scritte per questo evento.<br>I partecipanti potranno recensirlo dall'app mobile Rook al termine della loro visita.</p>
       </div>
     `;
   } else {
@@ -2465,16 +2465,43 @@ function setupCreateEventModule() {
   const groupCeOpzioniVeg = document.getElementById('groupCeOpzioniVeg');
   const ceOpzioniVeg = document.getElementById('ceOpzioniVeg');
 
-  // 1. Conditional visibility for food categories (Cibo & Sagre)
+  // 1. Dynamic label/prompt for Menu/Programma upload (visible for all categories) and vegetarian options (food only)
+  function updateMenuAndVegFields() {
+    const isFood = isCategoriaCibo(ceCategoria ? ceCategoria.value : '');
+
+    const iconCeMenu = document.getElementById('iconCeMenu');
+    const lblCeMenuTitle = document.getElementById('lblCeMenuTitle');
+    const iconDropzoneMenu = document.getElementById('iconDropzoneMenu');
+    const txtDropzoneMenu = document.getElementById('txtDropzoneMenu');
+    const hintDropzoneMenu = document.getElementById('hintDropzoneMenu');
+
+    if (isFood) {
+      if (iconCeMenu) iconCeMenu.className = 'fa-solid fa-utensils';
+      if (lblCeMenuTitle) lblCeMenuTitle.textContent = 'Menu Gastronomico';
+      if (iconDropzoneMenu) iconDropzoneMenu.className = 'fa-solid fa-receipt';
+      if (txtDropzoneMenu) txtDropzoneMenu.textContent = 'Carica foto del menu o locandina piatti';
+      if (hintDropzoneMenu) hintDropzoneMenu.textContent = 'Visibile nella sezione gastronomica';
+    } else {
+      if (iconCeMenu) iconCeMenu.className = 'fa-solid fa-file-lines';
+      if (lblCeMenuTitle) lblCeMenuTitle.textContent = "Programma dell'Evento";
+      if (iconDropzoneMenu) iconDropzoneMenu.className = 'fa-solid fa-file-lines';
+      if (txtDropzoneMenu) txtDropzoneMenu.textContent = 'Carica foto o locandina del programma';
+      if (hintDropzoneMenu) hintDropzoneMenu.textContent = "Visibile nella scheda dell'evento";
+    }
+
+    // Keep menu upload section always visible
+    if (groupCeMenuImage) groupCeMenuImage.classList.remove('hidden');
+
+    // Only vegetarian option is conditional on food
+    if (groupCeOpzioniVeg) {
+      groupCeOpzioniVeg.classList.toggle('hidden', !isFood);
+      if (!isFood && ceOpzioniVeg) ceOpzioniVeg.checked = false;
+    }
+  }
+
   if (ceCategoria) {
-    ceCategoria.addEventListener('change', () => {
-      const isFood = isCategoriaCibo(ceCategoria.value);
-      if (groupCeMenuImage) groupCeMenuImage.classList.toggle('hidden', !isFood);
-      if (groupCeOpzioniVeg) {
-        groupCeOpzioniVeg.classList.toggle('hidden', !isFood);
-        if (!isFood && ceOpzioniVeg) ceOpzioniVeg.checked = false;
-      }
-    });
+    ceCategoria.addEventListener('change', updateMenuAndVegFields);
+    updateMenuAndVegFields();
   }
 
   // 2. Segmented Date Controls & Live Preview
@@ -2764,7 +2791,7 @@ function setupCreateEventModule() {
     if (ceLocationVerifiedText && labelText) {
       ceLocationVerifiedText.textContent = labelText;
     } else if (ceLocationVerifiedText) {
-      ceLocationVerifiedText.textContent = 'Mappata con precisione per l\'app mobile CosaFare';
+      ceLocationVerifiedText.textContent = 'Mappata con precisione per l\'app mobile Rook';
     }
 
     if (ceLocationVerifiedBadge) {
@@ -2958,13 +2985,14 @@ function setupCreateEventModule() {
       const file = e.target.files[0];
       if (!file) return;
       try {
-        showToast('Elaborazione immagine del menu...', 'info');
+        const isFood = isCategoriaCibo(ceCategoria ? ceCategoria.value : '');
+        showToast(isFood ? 'Elaborazione immagine del menu...' : 'Elaborazione immagine del programma...', 'info');
         ceMenuBase64 = await compressAndConvertImage(file);
         ceMenuPreviewImg.src = ceMenuBase64;
         ceMenuPreviewWrapper.classList.remove('hidden');
         dropzoneMenuPrompt.classList.add('hidden');
       } catch (err) {
-        alert('Errore caricamento menu: ' + err.message);
+        alert('Errore caricamento immagine: ' + err.message);
       }
     });
   }
@@ -2995,6 +3023,17 @@ function setupCreateEventModule() {
 
       if (!titolo || !categoria || !via || !comune || !provincia || !descrizione) {
         alert('Per favore compila tutti i campi obbligatori.');
+        return;
+      }
+
+      // Validazione immagine Menu / Programma obbligatoria per tutte le categorie
+      if (!ceMenuBase64) {
+        const isFoodType = isCategoriaCibo(categoria);
+        const errorMsg = isFoodType 
+          ? 'Carica l\'immagine del menu gastronomico (campo obbligatorio).' 
+          : 'Carica l\'immagine del programma dell\'evento (campo obbligatorio).';
+        alert(errorMsg);
+        showToast(errorMsg, 'warning');
         return;
       }
 
@@ -3035,7 +3074,7 @@ function setupCreateEventModule() {
       const submitBtn = document.getElementById('btnSubmitCreateEvent');
       const originalBtnHtml = submitBtn.innerHTML;
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione su CosaFare...`;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione su Rook...`;
 
       try {
         const eventsRef = ref(db, 'eventi');
@@ -3059,7 +3098,7 @@ function setupCreateEventModule() {
           descrizione: descrizione,
           preferito: false,
           immagineCopertina: ceCopertinaBase64 || '',
-          immagineMenu: isFood ? (ceMenuBase64 || '') : '',
+          immagineMenu: ceMenuBase64 || '',
           mediaValutazioni: 0.0,
           numeroRecensioni: 0,
           likes: 0,
@@ -3077,6 +3116,7 @@ function setupCreateEventModule() {
 
         // Reset Form
         formCreateEvent.reset();
+        updateMenuAndVegFields();
         ceCopertinaBase64 = '';
         ceMenuBase64 = '';
         ceCopertinaPreviewWrapper.classList.add('hidden');
@@ -3276,7 +3316,7 @@ function renderOrganizerMyEvents() {
 }
 
 window.deleteOrgEvent = async function(eventId, title) {
-  if (!confirm(`Sei sicuro di voler eliminare permanentemente l'evento "${title}"?\n\nQuesta azione lo rimuoverà immediatamente da CosaFare.`)) {
+  if (!confirm(`Sei sicuro di voler eliminare permanentemente l'evento "${title}"?\n\nQuesta azione lo rimuoverà immediatamente da Rook.`)) {
     return;
   }
 
@@ -3336,7 +3376,7 @@ function renderOrganizerChatMessages(messages) {
     const isMe = m.senderRole === 'ORGANIZZATORE' || m.senderId === (currentOrganizerData?.id || currentUser?.uid);
     const senderDisplay = isMe 
       ? 'Tu (Organizzatore)' 
-      : 'Amministrazione CosaFare';
+      : 'Amministrazione Rook';
 
     return `
       <div class="message-bubble ${isMe ? 'admin-msg' : 'other-msg'}">
