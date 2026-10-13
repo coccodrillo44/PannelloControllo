@@ -2757,6 +2757,39 @@ function setupCreateEventModule() {
     });
   }
 
+  // Mappa province toscane alle rispettive sigle automobilistiche ufficiali
+  const MAP_PROVINCIA_TO_SIGLA = {
+    'arezzo': 'AR',
+    'firenze': 'FI',
+    'grosseto': 'GR',
+    'livorno': 'LI',
+    'lucca': 'LU',
+    'massa-carrara': 'MS',
+    'massa carrara': 'MS',
+    'massa': 'MS',
+    'carrara': 'MS',
+    'pisa': 'PI',
+    'pistoia': 'PT',
+    'prato': 'PO',
+    'siena': 'SI',
+    'ar': 'AR',
+    'fi': 'FI',
+    'gr': 'GR',
+    'li': 'LI',
+    'lu': 'LU',
+    'ms': 'MS',
+    'pi': 'PI',
+    'pt': 'PT',
+    'po': 'PO',
+    'si': 'SI'
+  };
+
+  function getSiglaProvincia(nomeOprov) {
+    if (!nomeOprov) return '';
+    const clean = nomeOprov.trim().toLowerCase();
+    return MAP_PROVINCIA_TO_SIGLA[clean] || nomeOprov.trim().toUpperCase();
+  }
+
   // 3. Address Autocomplete, Hidden Coordinates & Green GPS Verified Badge
   const ceVia = document.getElementById('ceVia');
   const ceComune = document.getElementById('ceComune');
@@ -2884,9 +2917,10 @@ function setupCreateEventModule() {
 
               const lat = parseFloat(selected.lat);
               const lon = parseFloat(selected.lon);
-              setLocationVerifiedBadge(lat, lon, `${fullRoad || city}, ${matchedProvince || 'Toscana'}`);
+              const siglaBadge = getSiglaProvincia(matchedProvince) || 'Toscana';
+              setLocationVerifiedBadge(lat, lon, `${fullRoad || city}, ${siglaBadge}`);
 
-              ceAddressSearch.value = `${fullRoad ? fullRoad + ', ' : ''}${city} (${matchedProvince || 'Toscana'})`;
+              ceAddressSearch.value = `${fullRoad ? fullRoad + ', ' : ''}${city} (${siglaBadge})`;
               ceAddressSuggestions.classList.add('hidden');
               if (btnClearAddressSearch) btnClearAddressSearch.classList.remove('hidden');
             });
@@ -2928,7 +2962,8 @@ function setupCreateEventModule() {
       if (via && comune && provincia) {
         try {
           const coords = await geocodeAddress(via, comune, provincia);
-          setLocationVerifiedBadge(coords.lat, coords.lng, `${via}, ${comune} (${provincia})`);
+          const sigla = getSiglaProvincia(provincia);
+          setLocationVerifiedBadge(coords.lat, coords.lng, `${via}, ${comune}, ${sigla}`);
         } catch (e) {
           console.warn('Geocodifica manuale fallita:', e);
         }
@@ -3084,6 +3119,11 @@ function setupCreateEventModule() {
         const orgId = currentOrganizerData?.id || currentUser.uid;
         const orgNome = currentOrganizerData?.nomeEnte || currentUser.displayName || 'Organizzatore';
 
+        const siglaProv = getSiglaProvincia(provincia);
+        const viaClean = via.replace(/[\s,]+$/, '').trim();
+        const comuneClean = comune.replace(/[\s,]+$/, '').trim();
+        const luogoFormattato = `${viaClean}, ${comuneClean}, ${siglaProv}`;
+
         const newEventObj = {
           id: eventId,
           idOrganizzatore: orgId,
@@ -3091,7 +3131,8 @@ function setupCreateEventModule() {
           titolo: titolo,
           data: dateInizioTs,
           date: intervalliArray,
-          luogo: `${via}, ${comune}, ${provincia}`,
+          luogo: luogoFormattato,
+          provincia: siglaProv,
           latitudine: lat,
           longitudine: lng,
           categoria: categoria,
