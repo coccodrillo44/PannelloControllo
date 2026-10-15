@@ -133,6 +133,11 @@
             <span>I Miei Eventi</span>
             <span id="badgeOrgMyEventsCount" class="nav-badge hidden">0</span>
           </button>
+          <button class="nav-item" data-target="view-org-collaborations">
+            <i class="fa-solid fa-handshake"></i>
+            <span>Collaborazioni</span>
+            <span id="badgeOrgCollabCount" class="nav-badge hidden">0</span>
+          </button>
           <button class="nav-item" data-target="view-org-chat">
             <i class="fa-solid fa-headset"></i>
             <span>Supporto Admin</span>
@@ -959,6 +964,39 @@
               </div>
             </div>
 
+            <!-- Sezione Co-Organizzatori / Collaborazioni -->
+            <div class="form-group full-width features-box" id="groupCeCollaboration">
+              <div class="features-box-header">
+                <label><i class="fa-solid fa-handshake" style="color: var(--primary);"></i> Evento in Collaborazione (Co-Organizzatori)</label>
+                <p class="sub-hint">Invita altri enti o associazioni registrate a co-organizzare questo evento con te.</p>
+              </div>
+
+              <div class="collab-creator-box">
+                <div class="partner-search-wrapper">
+                  <div class="search-box partner-search-box">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="cePartnerSearch" placeholder="Cerca organizzatore per nome, comune o provincia..." autocomplete="off" />
+                    <button type="button" id="ceBtnClearPartnerSearch" class="btn-clear-search hidden"><i class="fa-solid fa-xmark"></i></button>
+                  </div>
+                  <!-- Dropdown suggestions -->
+                  <div id="cePartnerSuggestions" class="partner-suggestions-dropdown hidden"></div>
+                </div>
+
+                <!-- Selected Partners List -->
+                <div id="ceSelectedPartnersContainer" class="selected-partners-container">
+                  <div class="selected-partners-label" id="ceSelectedPartnersCountLabel">
+                    <i class="fa-regular fa-user"></i> Nessun co-organizzatore selezionato (evento singolo)
+                  </div>
+                  <div id="ceSelectedPartnersList" class="selected-partners-chips-list"></div>
+                </div>
+
+                <div class="collab-info-note">
+                  <i class="fa-solid fa-circle-info"></i>
+                  <span>Se selezioni uno o più partner, l'evento verrà inviato come <strong>proposta di collaborazione</strong>. Sarà visibile e gestibile nella scheda <strong>Collaborazioni</strong> e verrà pubblicato ufficialmente nell'app Rook una volta che i partner avranno risposto o se decidi di pubblicarlo subito.</span>
+                </div>
+              </div>
+            </div>
+
             <!-- Submit Button -->
             <div class="form-submit-row">
               <button type="submit" id="btnSubmitCreateEvent" class="btn btn-primary btn-lg">
@@ -995,6 +1033,40 @@
         </div>
 
         <div id="orgMyEventsGrid" class="org-events-grid">
+          <!-- Rendered dynamically via JS -->
+        </div>
+      </section>
+
+      <!-- View 10: Organizer Collaborations -->
+      <section id="view-org-collaborations" class="content-view">
+        <div class="my-events-header">
+          <div>
+            <h3><i class="fa-solid fa-handshake"></i> Collaborazioni tra Organizzatori</h3>
+            <p>Gestisci le richieste di co-organizzazione ricevute da altri enti e monitora lo stato delle tue proposte inviate.</p>
+          </div>
+          <button id="btnNewCollabEvent" class="btn btn-primary btn-sm">
+            <i class="fa-solid fa-plus"></i> Proponi Collaborazione
+          </button>
+        </div>
+
+        <div class="my-events-filter-bar collab-tabs-bar">
+          <div class="pill-group" id="collabMainSubTabs">
+            <button class="pill-btn active" id="btnCollabTabReceived" data-subtab="received">
+              <i class="fa-solid fa-inbox"></i> Richieste Ricevute
+              <span id="badgeCollabReceived" class="tab-badge hidden">0</span>
+            </button>
+            <button class="pill-btn" id="btnCollabTabSent" data-subtab="sent">
+              <i class="fa-solid fa-paper-plane"></i> Proposte Inviate
+              <span id="badgeCollabSent" class="tab-badge neutral hidden">0</span>
+            </button>
+          </div>
+          <div class="search-box">
+            <i class="fa-solid fa-magnifying-glass"></i>
+            <input type="text" id="searchCollabInput" placeholder="Cerca tra le collaborazioni..." />
+          </div>
+        </div>
+
+        <div id="collabCardsGrid" class="collab-cards-grid">
           <!-- Rendered dynamically via JS -->
         </div>
       </section>
@@ -1310,6 +1382,71 @@
       </div>
       <div class="modal-footer">
         <button class="btn btn-secondary" data-close-modal="modalEventReviews">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Dettaglio Proposta di Collaborazione -->
+  <div id="modalCollabDetail" class="modal-overlay hidden">
+    <div class="modal-dialog modal-dialog-lg">
+      <div class="modal-header">
+        <div>
+          <h4 id="collabModalHeaderTitle"><i class="fa-solid fa-handshake"></i> Dettaglio Proposta di Collaborazione</h4>
+          <p id="collabModalHeaderSubtitle" class="modal-subtitle">Informazioni sull'evento e stato di adesione dei partner</p>
+        </div>
+        <button class="modal-close" data-close-modal="modalCollabDetail">&times;</button>
+      </div>
+      <div class="modal-body" id="collabModalBody">
+        <!-- Rendered dynamically via JS -->
+      </div>
+      <div class="modal-footer" id="collabModalFooter">
+        <button class="btn btn-secondary" data-close-modal="modalCollabDetail">Chiudi</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Conferma Pubblica Subito Proposta -->
+  <div id="modalConfirmPublishNowCollab" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h4><i class="fa-solid fa-rocket" style="color: var(--primary);"></i> Pubblica Subito l'Evento</h4>
+          <p class="modal-subtitle">Pubblicazione anticipata nel catalogo ufficiale</p>
+        </div>
+        <button class="modal-close" data-close-modal="modalConfirmPublishNowCollab">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Sei sicuro di voler pubblicare subito questo evento su <strong>Rook</strong>?</p>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">
+          L'evento sarà immediatamente visibile a tutti gli utenti dell'app mobile. I partner che hanno già accettato compariranno come co-organizzatori ufficiali.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalConfirmPublishNowCollab">Annulla</button>
+        <button id="btnConfirmPublishNowCollab" class="btn btn-primary"><i class="fa-solid fa-paper-plane"></i> Pubblica Subito</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal: Conferma Annullamento Proposta -->
+  <div id="modalConfirmCancelCollab" class="modal-overlay hidden">
+    <div class="modal-dialog">
+      <div class="modal-header">
+        <div>
+          <h4><i class="fa-solid fa-ban" style="color: var(--danger);"></i> Annulla Proposta</h4>
+          <p class="modal-subtitle">Cancellazione della collaborazione</p>
+        </div>
+        <button class="modal-close" data-close-modal="modalConfirmCancelCollab">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Sei sicuro di voler annullare questa proposta di collaborazione?</p>
+        <p class="text-muted" style="font-size: 0.85rem; margin-top: 0.5rem;">
+          L'evento <strong>non</strong> verrà pubblicato e la proposta verrà archiviata come annullata. Questa operazione non può essere annullata.
+        </p>
+      </div>
+      <div class="modal-footer">
+        <button class="btn btn-secondary" data-close-modal="modalConfirmCancelCollab">Indietro</button>
+        <button id="btnConfirmCancelCollab" class="btn btn-danger"><i class="fa-solid fa-trash"></i> Annulla Proposta</button>
       </div>
     </div>
   </div>

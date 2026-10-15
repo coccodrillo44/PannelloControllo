@@ -658,6 +658,10 @@ const viewTitles = {
     title: 'I Miei Eventi',
     subtitle: 'Gestione e consultazione di tutti gli eventi pubblicati dal tuo ente'
   },
+  'view-org-collaborations': {
+    title: 'Collaborazioni tra Enti',
+    subtitle: 'Gestione delle richieste ricevute e delle proposte inviate per eventi in co-organizzazione'
+  },
   'view-org-chat': {
     title: 'Supporto Amministrazione',
     subtitle: 'Canale di comunicazione diretto in tempo reale con lo staff amministrativo'
@@ -2014,10 +2018,21 @@ function setupOrganizerListeners() {
     renderOrganizerMyEvents();
   });
 
-  // 3. Setup Organizer Support Chat
+  // 3. Listen to Enti (for co-organizer search & names)
+  onValue(ref(db, 'enti'), (snapshot) => {
+    rawOrganizersData = snapshot.val() || {};
+  });
+
+  // 4. Listen to Collaborations
+  onValue(ref(db, 'proposte_collaborazione'), (snapshot) => {
+    rawProposteCollabData = snapshot.val() || {};
+    renderOrganizerCollaborations();
+  });
+
+  // 5. Setup Organizer Support Chat
   setupOrganizerChatListener();
 
-  // 4. Setup Organizer Profile Listener & Render
+  // 6. Setup Organizer Profile Listener & Render
   const orgId = currentOrganizerData?.id || currentUser?.uid;
   if (orgId) {
     onValue(ref(db, `enti/${orgId}`), (snapshot) => {
@@ -2028,6 +2043,7 @@ function setupOrganizerListeners() {
     });
   }
   renderOrganizerProfile();
+  renderOrganizerCollaborations();
 }
 
 // ───────────────────────────────────────────────
@@ -3042,7 +3058,168 @@ function setupCreateEventModule() {
     });
   }
 
-  // 6. Form Submission
+  // 6. Co-Organizers / Collaboration Partner Picker
+  const cePartnerSearch = document.getElementById('cePartnerSearch');
+  const ceBtnClearPartnerSearch = document.getElementById('ceBtnClearPartnerSearch');
+  const cePartnerSuggestions = document.getElementById('cePartnerSuggestions');
+  const ceSelectedPartnersContainer = document.getElementById('ceSelectedPartnersContainer');
+  const ceSelectedPartnersCountLabel = document.getElementById('ceSelectedPartnersCountLabel');
+  const ceSelectedPartnersList = document.getElementById('ceSelectedPartnersList');
+  const btnSubmitCreateEvent = document.getElementById('btnSubmitCreateEvent');
+
+  function updateSelectedPartnersUI() {
+    if (!ceSelectedPartnersList || !ceSelectedPartnersCountLabel) return;
+    ceSelectedPartnersList.innerHTML = '';
+
+    if (selectedCollabPartners.length === 0) {
+      ceSelectedPartnersCountLabel.innerHTML = '<i class="fa-regular fa-user"></i> Nessun co-organizzatore selezionato (evento singolo)';
+      if (btnSubmitCreateEvent) {
+        btnSubmitCreateEvent.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Pubblica Evento su Rook';
+      }
+    } else {
+      const count = selectedCollabPartners.length;
+      ceSelectedPartnersCountLabel.innerHTML = `<i class="fa-solid fa-users"></i> ${count} ${count === 1 ? 'co-organizzatore selezionato (evento in collaborazione)' : 'co-organizzatori selezionati (evento in collaborazione)'}`;
+      if (btnSubmitCreateEvent) {
+        btnSubmitCreateEvent.innerHTML = `<i class="fa-solid fa-handshake"></i> Invia Proposta di Collaborazione (${count})`;
+      }
+
+      selectedCollabPartners.forEach((partner, idx) => {
+        const chip = document.createElement('div');
+        chip.className = 'partner-chip';
+        const initial = (partner.nomeEnte || 'P').charAt(0).toUpperCase();
+        const loc = partner.comuneEnte ? `${partner.comuneEnte} (${partner.provinciaEnte || ''})` : '';
+
+        chip.innerHTML = `
+          <div class="partner-chip-avatar">${escapeHtml(initial)}</div>
+          <span class="partner-chip-name">${escapeHtml(partner.nomeEnte || 'Organizzatore')}</span>
+          ${loc ? `<span class="partner-chip-loc">${escapeHtml(loc)}</span>` : ''}
+          <button type="button" class="partner-chip-remove" data-partner-idx="${idx}" title="Rimuovi partner">&times;</button>
+        `;
+
+        chip.querySelector('.partner-chip-remove').addEventListener('click', () => {
+          selectedCollabPartners.splice(idx, 1);
+          updateSelectedPartnersUI();
+        });
+
+        ceSelectedPartnersList.appendChild(chip);
+      });
+    }
+  }
+
+  function renderPartnerSuggestions(query) {
+    if (!cePartnerSuggestions) return;
+    const cleanQuery = query.trim().toLowerCase();
+    if (cleanQuery.length < 2) {
+      cePartnerSuggestions.innerHTML = '';
+      cePartnerSuggestions.classList.add('hidden');
+      return;
+    }
+
+    const myId = currentOrganizerData?.id || currentUser?.uid || '';
+    const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || '').trim().toLowerCase();
+
+    const organizersList = Object.entries(rawOrganizersData).map(([uid, org]) => ({
+      id: uid,
+      uid: uid,
+      ...org
+    }));
+
+    const filtered = organizersList.filter((org) => {
+      const orgId = org.id || org.uid;
+      const nome = (org.nomeEnte || '').trim();
+      const nomeLower = nome.toLowerCase();
+
+      // Exclude current organizer
+      if (myId && orgId === myId) return false;
+      if (myNome && nomeLower === myNome) return false;
+
+      // Exclude already chosen partners
+      if (selectedCollabPartners.some(p => p.id === orgId || p.uid === orgId || (p.nomeEnte && p.nomeEnte.toLowerCase() === nomeLower))) {
+        return false;
+      }
+
+      // Filter by name, municipality or province
+      const comune = (org.comuneEnte || org.sedeOrg || '').toLowerCase();
+      const prov = (org.provinciaEnte || '').toLowerCase();
+
+      return nomeLower.includes(cleanQuery) || comune.includes(cleanQuery) || prov.includes(cleanQuery);
+    }).slice(0, 8);
+
+    if (filtered.length === 0) {
+      cePartnerSuggestions.innerHTML = `
+        <div class="partner-suggestion-empty">
+          <i class="fa-solid fa-user-xmark" style="color: #94a3b8; font-size: 1.2rem; margin-bottom: 0.35rem; display: block;"></i>
+          Nessun organizzatore trovato con "<strong>${escapeHtml(query)}</strong>"
+        </div>
+      `;
+      cePartnerSuggestions.classList.remove('hidden');
+      return;
+    }
+
+    cePartnerSuggestions.innerHTML = '';
+    filtered.forEach((org) => {
+      const item = document.createElement('div');
+      item.className = 'partner-suggestion-item';
+      const initial = (org.nomeEnte || 'O').charAt(0).toUpperCase();
+      const sede = org.comuneEnte ? `${org.comuneEnte} (${org.provinciaEnte || ''})` : (org.sedeOrg || '');
+
+      item.innerHTML = `
+        <div class="partner-suggestion-avatar">${escapeHtml(initial)}</div>
+        <div class="partner-suggestion-info">
+          <div class="partner-suggestion-name">${escapeHtml(org.nomeEnte || 'Organizzatore')}</div>
+          ${sede ? `<div class="partner-suggestion-meta"><i class="fa-solid fa-location-dot"></i> ${escapeHtml(sede)}</div>` : ''}
+        </div>
+        <button type="button" class="btn btn-sm btn-outline-primary" style="padding: 0.2rem 0.6rem; font-size: 0.75rem;">
+          <i class="fa-solid fa-plus"></i> Aggiungi
+        </button>
+      `;
+
+      item.addEventListener('click', () => {
+        selectedCollabPartners.push(org);
+        if (cePartnerSearch) cePartnerSearch.value = '';
+        if (ceBtnClearPartnerSearch) ceBtnClearPartnerSearch.classList.add('hidden');
+        cePartnerSuggestions.innerHTML = '';
+        cePartnerSuggestions.classList.add('hidden');
+        updateSelectedPartnersUI();
+        showToast(`Aggiunto "${org.nomeEnte}" come co-organizzatore`, 'info');
+      });
+
+      cePartnerSuggestions.appendChild(item);
+    });
+
+    cePartnerSuggestions.classList.remove('hidden');
+  }
+
+  if (cePartnerSearch) {
+    cePartnerSearch.addEventListener('input', (e) => {
+      const val = e.target.value;
+      if (ceBtnClearPartnerSearch) {
+        ceBtnClearPartnerSearch.classList.toggle('hidden', val.trim().length === 0);
+      }
+      renderPartnerSuggestions(val);
+    });
+
+    // Close suggestions on outside click
+    document.addEventListener('click', (e) => {
+      if (!cePartnerSearch.contains(e.target) && !cePartnerSuggestions?.contains(e.target)) {
+        if (cePartnerSuggestions) cePartnerSuggestions.classList.add('hidden');
+      }
+    });
+  }
+
+  if (ceBtnClearPartnerSearch) {
+    ceBtnClearPartnerSearch.addEventListener('click', () => {
+      cePartnerSearch.value = '';
+      ceBtnClearPartnerSearch.classList.add('hidden');
+      if (cePartnerSuggestions) {
+        cePartnerSuggestions.innerHTML = '';
+        cePartnerSuggestions.classList.add('hidden');
+      }
+      cePartnerSearch.focus();
+    });
+  }
+
+  // 7. Form Submission
   const formCreateEvent = document.getElementById('formCreateEvent');
   if (formCreateEvent) {
     formCreateEvent.addEventListener('submit', async (e) => {
@@ -3108,14 +3285,14 @@ function setupCreateEventModule() {
 
       const submitBtn = document.getElementById('btnSubmitCreateEvent');
       const originalBtnHtml = submitBtn.innerHTML;
+      const isCollab = selectedCollabPartners.length > 0;
+
       submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione su Rook...`;
+      submitBtn.innerHTML = isCollab
+        ? `<i class="fa-solid fa-spinner fa-spin"></i> Invio proposta di collaborazione...`
+        : `<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione su Rook...`;
 
       try {
-        const eventsRef = ref(db, 'eventi');
-        const newRef = push(eventsRef);
-        const eventId = newRef.key;
-
         const orgId = currentOrganizerData?.id || currentUser.uid;
         const orgNome = currentOrganizerData?.nomeEnte || currentUser.displayName || 'Organizzatore';
 
@@ -3124,36 +3301,127 @@ function setupCreateEventModule() {
         const comuneClean = comune.replace(/[\s,]+$/, '').trim();
         const luogoFormattato = `${viaClean}, ${comuneClean}, ${siglaProv}`;
 
-        const newEventObj = {
-          id: eventId,
-          idOrganizzatore: orgId,
-          organizzatore: orgNome,
-          titolo: titolo,
-          data: dateInizioTs,
-          date: intervalliArray,
-          luogo: luogoFormattato,
-          provincia: siglaProv,
-          latitudine: lat,
-          longitudine: lng,
-          categoria: categoria,
-          descrizione: descrizione,
-          preferito: false,
-          immagineCopertina: ceCopertinaBase64 || '',
-          immagineMenu: ceMenuBase64 || '',
-          mediaValutazioni: 0.0,
-          numeroRecensioni: 0,
-          likes: 0,
-          geohash: geohashVal,
-          accessibileDisabili: accessibileDisabili,
-          opzioniVeg: opzioniVeg,
-          boostScadenza: 0,
-          boostTipo: '',
-          stability: 0
-        };
+        if (isCollab) {
+          // ───────────────────────────────────────────────
+          // Modalità Collaborazione -> Crea Proposta in /proposte_collaborazione
+          // ───────────────────────────────────────────────
+          const propRef = push(ref(db, 'proposte_collaborazione'));
+          const proposalId = propRef.key;
 
-        await set(newRef, newEventObj);
+          const eventData = {
+            id: proposalId,
+            idOrganizzatore: orgId,
+            organizzatore: orgNome,
+            titolo: titolo,
+            data: dateInizioTs,
+            date: intervalliArray,
+            luogo: luogoFormattato,
+            provincia: siglaProv,
+            latitudine: lat,
+            longitudine: lng,
+            categoria: categoria,
+            descrizione: descrizione,
+            preferito: false,
+            immagineCopertina: ceCopertinaBase64 || '',
+            immagineMenu: ceMenuBase64 || '',
+            mediaValutazioni: 0.0,
+            numeroRecensioni: 0,
+            likes: 0,
+            geohash: geohashVal,
+            accessibileDisabili: accessibileDisabili,
+            opzioniVeg: opzioniVeg,
+            idCoOrganizzatori: [],
+            coOrganizzatori: [],
+            boostScadenza: 0,
+            boostTipo: '',
+            stability: 0
+          };
 
-        showToast(`Evento "${titolo}" pubblicato con successo!`, 'success');
+          const partnerMap = {};
+          selectedCollabPartners.forEach((p) => {
+            const pKey = p.id || p.uid || p.idEnte;
+            partnerMap[pKey] = {
+              idEnte: pKey,
+              nomeEnte: p.nomeEnte || 'Partner',
+              stato: 'IN_ATTESA'
+            };
+          });
+
+          const propostaObj = {
+            idProposta: proposalId,
+            idCreatore: orgId,
+            nomeCreatore: orgNome,
+            evento: eventData,
+            partner: partnerMap,
+            statoGlobale: 'IN_ATTESA',
+            timestampCreazione: Date.now()
+          };
+
+          await set(propRef, propostaObj);
+
+          // Invia notifica a ciascun co-organizzatore invitato
+          for (const [pKey, pVal] of Object.entries(partnerMap)) {
+            const notificaId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+            const notifica = {
+              idNotifica: notificaId,
+              tipo: 'PROPOSTA_COLLAB_RICEVUTA',
+              idProposta: proposalId,
+              idEvento: proposalId,
+              titoloEvento: titolo,
+              nomeMittente: orgNome,
+              messaggio: `${orgNome} ti ha invitato a collaborare all'evento '${titolo}'!`,
+              timestamp: Date.now(),
+              letta: false
+            };
+            try {
+              await set(ref(db, `notifiche_organizzatori/${pKey}/${notificaId}`), notifica);
+            } catch (notifErr) {
+              console.warn('Errore notifica organizzatore:', notifErr);
+            }
+          }
+
+          showToast(`Proposta di collaborazione per "${titolo}" inviata con successo a ${selectedCollabPartners.length} partner!`, 'success');
+
+        } else {
+          // ───────────────────────────────────────────────
+          // Modalità Evento Singolo -> Salva direttamente in /eventi
+          // ───────────────────────────────────────────────
+          const eventsRef = ref(db, 'eventi');
+          const newRef = push(eventsRef);
+          const eventId = newRef.key;
+
+          const newEventObj = {
+            id: eventId,
+            idOrganizzatore: orgId,
+            organizzatore: orgNome,
+            titolo: titolo,
+            data: dateInizioTs,
+            date: intervalliArray,
+            luogo: luogoFormattato,
+            provincia: siglaProv,
+            latitudine: lat,
+            longitudine: lng,
+            categoria: categoria,
+            descrizione: descrizione,
+            preferito: false,
+            immagineCopertina: ceCopertinaBase64 || '',
+            immagineMenu: ceMenuBase64 || '',
+            mediaValutazioni: 0.0,
+            numeroRecensioni: 0,
+            likes: 0,
+            geohash: geohashVal,
+            accessibileDisabili: accessibileDisabili,
+            opzioniVeg: opzioniVeg,
+            idCoOrganizzatori: [],
+            coOrganizzatori: [],
+            boostScadenza: 0,
+            boostTipo: '',
+            stability: 0
+          };
+
+          await set(newRef, newEventObj);
+          showToast(`Evento "${titolo}" pubblicato con successo!`, 'success');
+        }
 
         // Reset Form
         formCreateEvent.reset();
@@ -3174,9 +3442,28 @@ function setupCreateEventModule() {
         renderConfiguredPeriods();
         setDateMode('single');
 
-        // Switch to "I Miei Eventi" view
-        const myEventsNav = document.querySelector('[data-target="view-org-my-events"]');
-        if (myEventsNav) myEventsNav.click();
+        // Reset partners
+        selectedCollabPartners = [];
+        if (cePartnerSearch) cePartnerSearch.value = '';
+        if (ceBtnClearPartnerSearch) ceBtnClearPartnerSearch.classList.add('hidden');
+        if (cePartnerSuggestions) {
+          cePartnerSuggestions.innerHTML = '';
+          cePartnerSuggestions.classList.add('hidden');
+        }
+        updateSelectedPartnersUI();
+
+        // Switch view
+        if (isCollab) {
+          const collabNav = document.querySelector('[data-target="view-org-collaborations"]');
+          if (collabNav) {
+            collabNav.click();
+            const sentTabBtn = document.getElementById('btnCollabTabSent');
+            if (sentTabBtn) sentTabBtn.click();
+          }
+        } else {
+          const myEventsNav = document.querySelector('[data-target="view-org-my-events"]');
+          if (myEventsNav) myEventsNav.click();
+        }
 
       } catch (err) {
         console.error('Errore pubblicazione evento:', err);
@@ -3190,6 +3477,814 @@ function setupCreateEventModule() {
   }
 }
 setupCreateEventModule();
+
+// ==========================================================================
+// E) Collaborations Module (Richieste Ricevute & Proposte Inviate)
+// ==========================================================================
+
+let rawProposteCollabData = {};
+let selectedCollabPartners = [];
+let currentActiveCollabTab = 'received';
+let collabSearchFilter = '';
+let currentProposalForModal = null;
+let proposalForPublishNow = null;
+let proposalForCancel = null;
+
+function findMyPartnerEntry(proposta, myId, myNome) {
+  if (!proposta || !proposta.partner) return null;
+  const entries = Object.entries(proposta.partner);
+  return entries.find(([key, val]) => {
+    if (myId && (key === myId || val?.idEnte === myId)) return true;
+    if (myNome && val?.nomeEnte && val.nomeEnte.trim().toLowerCase() === myNome.trim().toLowerCase()) return true;
+    return false;
+  }) || null;
+}
+
+function getOrganizerCollaborations() {
+  const myId = currentOrganizerData?.id || currentUser?.uid || '';
+  const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || '').trim();
+
+  const allProposte = Object.entries(rawProposteCollabData).map(([id, p]) => ({
+    idProposta: id,
+    ...p
+  }));
+
+  const ricevute = [];
+  const inviate = [];
+
+  allProposte.forEach((p) => {
+    if (p.statoGlobale !== 'IN_ATTESA') return; // Active proposals only
+
+    // 1. Inviate da me
+    if (p.idCreatore === myId || (myNome && p.nomeCreatore && p.nomeCreatore.trim().toLowerCase() === myNome.toLowerCase())) {
+      inviate.push(p);
+      return;
+    }
+
+    // 2. Ricevute (io sono tra i partner)
+    const myEntry = findMyPartnerEntry(p, myId, myNome);
+    if (myEntry) {
+      ricevute.push(p);
+    }
+  });
+
+  // Sort by newest first
+  ricevute.sort((a, b) => (b.timestampCreazione || 0) - (a.timestampCreazione || 0));
+  inviate.sort((a, b) => (b.timestampCreazione || 0) - (a.timestampCreazione || 0));
+
+  return { ricevute, inviate };
+}
+
+function renderOrganizerCollaborations() {
+  const myId = currentOrganizerData?.id || currentUser?.uid || '';
+  const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || '').trim();
+
+  const { ricevute, inviate } = getOrganizerCollaborations();
+
+  // Badge count on sidebar (only pending received requests that require my action)
+  const pendingReceivedCount = ricevute.filter((p) => {
+    const myEntry = findMyPartnerEntry(p, myId, myNome);
+    return myEntry && myEntry[1]?.stato === 'IN_ATTESA';
+  }).length;
+
+  const sidebarBadge = document.getElementById('badgeOrgCollabCount');
+  if (sidebarBadge) {
+    sidebarBadge.textContent = pendingReceivedCount;
+    sidebarBadge.classList.toggle('hidden', pendingReceivedCount === 0);
+  }
+
+  // Sub-tab badges
+  const badgeReceived = document.getElementById('badgeCollabReceived');
+  if (badgeReceived) {
+    badgeReceived.textContent = pendingReceivedCount;
+    badgeReceived.classList.toggle('hidden', pendingReceivedCount === 0);
+  }
+
+  const badgeSent = document.getElementById('badgeCollabSent');
+  if (badgeSent) {
+    badgeSent.textContent = inviate.length;
+    badgeSent.classList.toggle('hidden', inviate.length === 0);
+  }
+
+  const container = document.getElementById('collabCardsGrid');
+  if (!container) return;
+
+  const isReceivedTab = currentActiveCollabTab === 'received';
+  let targetList = isReceivedTab ? ricevute : inviate;
+
+  if (collabSearchFilter) {
+    const q = collabSearchFilter.toLowerCase();
+    targetList = targetList.filter((p) => {
+      const tit = (p.evento?.titolo || '').toLowerCase();
+      const luogo = (p.evento?.luogo || '').toLowerCase();
+      const cat = (p.evento?.categoria || '').toLowerCase();
+      const creatore = (p.nomeCreatore || '').toLowerCase();
+      const partnerNames = Object.values(p.partner || {}).map(v => (v.nomeEnte || '').toLowerCase()).join(' ');
+      return tit.includes(q) || luogo.includes(q) || cat.includes(q) || creatore.includes(q) || partnerNames.includes(q);
+    });
+  }
+
+  if (targetList.length === 0) {
+    const emptyMsg = isReceivedTab
+      ? 'Nessuna richiesta di collaborazione ricevuta al momento.'
+      : 'Nessuna proposta di collaborazione inviata al momento.';
+    const emptySub = isReceivedTab
+      ? 'Quando un altro ente ti inviterà a co-organizzare un evento, la richiesta comparirà qui.'
+      : 'Crea un nuovo evento e seleziona dei co-organizzatori per inviare una proposta.';
+
+    container.innerHTML = `
+      <div class="empty-state-card" style="grid-column: 1 / -1; padding: 3rem 1.5rem; text-align: center; background: #fff; border-radius: var(--radius-lg); border: 1px dashed var(--border);">
+        <i class="fa-solid fa-handshake" style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;"></i>
+        <h4 style="font-size: 1.1rem; color: var(--text-main); margin-bottom: 0.35rem;">${escapeHtml(emptyMsg)}</h4>
+        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 480px; margin: 0 auto 1.25rem;">${escapeHtml(emptySub)}</p>
+        ${!isReceivedTab ? `
+          <button type="button" class="btn btn-primary btn-sm" id="btnEmptyNewCollab">
+            <i class="fa-solid fa-plus"></i> Crea Nuova Proposta
+          </button>
+        ` : ''}
+      </div>
+    `;
+
+    const btnEmptyNew = document.getElementById('btnEmptyNewCollab');
+    if (btnEmptyNew) {
+      btnEmptyNew.addEventListener('click', () => {
+        const createNav = document.querySelector('[data-target="view-org-create-event"]');
+        if (createNav) createNav.click();
+      });
+    }
+    return;
+  }
+
+  container.innerHTML = '';
+
+  targetList.forEach((p) => {
+    const card = document.createElement('div');
+    card.className = 'collab-card';
+
+    const ev = p.evento || {};
+    const dateFormatted = formatEventDate(ev);
+    const coverUrl = ev.immagineCopertina;
+
+    if (isReceivedTab) {
+      // ───────────────────────────────────────────────
+      // Card Richiesta Ricevuta
+      // ───────────────────────────────────────────────
+      const myEntry = findMyPartnerEntry(p, myId, myNome);
+      const mioStato = myEntry ? myEntry[1]?.stato || 'IN_ATTESA' : 'IN_ATTESA';
+
+      let statusBadgeHtml = '';
+      if (mioStato === 'ACCETTATA') {
+        statusBadgeHtml = `<span class="badge-collab-status badge-accettata"><i class="fa-solid fa-check"></i> Accettata</span>`;
+      } else if (mioStato === 'RIFIUTATA') {
+        statusBadgeHtml = `<span class="badge-collab-status badge-rifiutata"><i class="fa-solid fa-xmark"></i> Rifiutata</span>`;
+      } else {
+        statusBadgeHtml = `<span class="badge-collab-status badge-in-attesa"><i class="fa-solid fa-clock"></i> In Attesa di Risposta</span>`;
+      }
+
+      // Altri partner invitati (escluso me)
+      const altriPartner = Object.entries(p.partner || {}).filter(([k, v]) => {
+        if (myId && (k === myId || v.idEnte === myId)) return false;
+        if (myNome && v.nomeEnte && v.nomeEnte.trim().toLowerCase() === myNome.toLowerCase()) return false;
+        return true;
+      }).map(([_, v]) => v.nomeEnte || 'Partner');
+
+      card.innerHTML = `
+        <div class="collab-card-header">
+          <div class="collab-card-creator" title="Proposta inviata da ${escapeHtml(p.nomeCreatore)}">
+            <i class="fa-solid fa-building"></i> Da: ${escapeHtml(p.nomeCreatore || 'Organizzatore')}
+          </div>
+          ${statusBadgeHtml}
+        </div>
+
+        <div class="collab-card-body">
+          <div class="collab-card-title-row">
+            ${coverUrl 
+              ? `<img src="${escapeHtml(coverUrl)}" class="collab-card-thumb" alt="Copertina" onerror="this.outerHTML='<div class=\\'collab-card-thumb-placeholder\\'><i class=\\'fa-regular fa-image\\'></i></div>'" />` 
+              : `<div class="collab-card-thumb-placeholder"><i class="fa-regular fa-image"></i></div>`}
+            <div class="collab-card-title-meta">
+              <h4>${escapeHtml(ev.titolo || 'Evento Senza Titolo')}</h4>
+              <span class="collab-card-category-pill">${escapeHtml(ev.categoria || 'Generale')}</span>
+            </div>
+          </div>
+
+          <div class="collab-card-info-row">
+            <i class="fa-regular fa-calendar-days"></i>
+            <span>${escapeHtml(dateFormatted)}</span>
+          </div>
+
+          ${ev.luogo ? `
+            <div class="collab-card-info-row">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>${escapeHtml(ev.luogo)}</span>
+            </div>
+          ` : ''}
+
+          ${altriPartner.length > 0 ? `
+            <div class="collab-card-info-row" style="font-size: 0.75rem; color: #64748b; margin-top: 0.25rem;">
+              <i class="fa-solid fa-users"></i>
+              <span>Altri partner: ${escapeHtml(altriPartner.join(', '))}</span>
+            </div>
+          ` : ''}
+
+          <div class="collab-card-actions">
+            <button type="button" class="btn btn-secondary btn-sm btn-collab-details" data-id="${escapeHtml(p.idProposta)}">
+              <i class="fa-solid fa-eye"></i> Dettagli
+            </button>
+            ${mioStato === 'IN_ATTESA' ? `
+              <button type="button" class="btn btn-outline-danger btn-sm btn-collab-reject" data-id="${escapeHtml(p.idProposta)}">
+                <i class="fa-solid fa-xmark"></i> Rifiuta
+              </button>
+              <button type="button" class="btn btn-success btn-sm btn-collab-accept" data-id="${escapeHtml(p.idProposta)}">
+                <i class="fa-solid fa-check"></i> Accetta
+              </button>
+            ` : ''}
+          </div>
+        </div>
+      `;
+
+    } else {
+      // ───────────────────────────────────────────────
+      // Card Proposta Inviata
+      // ───────────────────────────────────────────────
+      const partnersList = Object.values(p.partner || {});
+
+      card.innerHTML = `
+        <div class="collab-card-header">
+          <div class="collab-card-creator" style="color: var(--text-main);">
+            <i class="fa-solid fa-paper-plane" style="color: var(--primary);"></i> La tua proposta
+          </div>
+          <span class="badge-collab-status badge-in-attesa"><i class="fa-solid fa-clock"></i> In Attesa Partner</span>
+        </div>
+
+        <div class="collab-card-body">
+          <div class="collab-card-title-row">
+            ${coverUrl 
+              ? `<img src="${escapeHtml(coverUrl)}" class="collab-card-thumb" alt="Copertina" onerror="this.outerHTML='<div class=\\'collab-card-thumb-placeholder\\'><i class=\\'fa-regular fa-image\\'></i></div>'" />` 
+              : `<div class="collab-card-thumb-placeholder"><i class="fa-regular fa-image"></i></div>`}
+            <div class="collab-card-title-meta">
+              <h4>${escapeHtml(ev.titolo || 'Evento Senza Titolo')}</h4>
+              <span class="collab-card-category-pill">${escapeHtml(ev.categoria || 'Generale')}</span>
+            </div>
+          </div>
+
+          <div class="collab-card-info-row">
+            <i class="fa-regular fa-calendar-days"></i>
+            <span>${escapeHtml(dateFormatted)}</span>
+          </div>
+
+          ${ev.luogo ? `
+            <div class="collab-card-info-row">
+              <i class="fa-solid fa-location-dot"></i>
+              <span>${escapeHtml(ev.luogo)}</span>
+            </div>
+          ` : ''}
+
+          <div class="collab-partners-box">
+            <div class="collab-partners-box-title">
+              <i class="fa-solid fa-users"></i> Partner Invitati (${partnersList.length})
+            </div>
+            ${partnersList.map((partner) => {
+              let pBadge = '';
+              if (partner.stato === 'ACCETTATA') {
+                pBadge = `<span class="badge-collab-status badge-accettata" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-check"></i> Accettata</span>`;
+              } else if (partner.stato === 'RIFIUTATA') {
+                pBadge = `<span class="badge-collab-status badge-rifiutata" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-xmark"></i> Rifiutata</span>`;
+              } else {
+                pBadge = `<span class="badge-collab-status badge-in-attesa" style="font-size: 0.68rem; padding: 0.15rem 0.45rem;"><i class="fa-solid fa-clock"></i> In Attesa</span>`;
+              }
+              return `
+                <div class="collab-partner-row">
+                  <span class="collab-partner-name">${escapeHtml(partner.nomeEnte || 'Partner')}</span>
+                  ${pBadge}
+                </div>
+              `;
+            }).join('')}
+          </div>
+
+          <div class="collab-card-actions">
+            <button type="button" class="btn btn-secondary btn-sm btn-collab-details" data-id="${escapeHtml(p.idProposta)}">
+              <i class="fa-solid fa-eye"></i> Dettagli
+            </button>
+            <button type="button" class="btn btn-outline-danger btn-sm btn-collab-cancel-prompt" data-id="${escapeHtml(p.idProposta)}">
+              <i class="fa-solid fa-ban"></i> Annulla
+            </button>
+            <button type="button" class="btn btn-primary btn-sm btn-collab-publish-prompt" data-id="${escapeHtml(p.idProposta)}">
+              <i class="fa-solid fa-rocket"></i> Pubblica Subito
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    // Attach button listeners
+    const btnDetails = card.querySelector('.btn-collab-details');
+    if (btnDetails) {
+      btnDetails.addEventListener('click', () => openCollabDetailModal(p, isReceivedTab));
+    }
+
+    const btnAccept = card.querySelector('.btn-collab-accept');
+    if (btnAccept) {
+      btnAccept.addEventListener('click', () => handleAcceptProposal(p));
+    }
+
+    const btnReject = card.querySelector('.btn-collab-reject');
+    if (btnReject) {
+      btnReject.addEventListener('click', () => handleRejectProposal(p));
+    }
+
+    const btnCancelPrompt = card.querySelector('.btn-collab-cancel-prompt');
+    if (btnCancelPrompt) {
+      btnCancelPrompt.addEventListener('click', () => openCancelModal(p));
+    }
+
+    const btnPublishPrompt = card.querySelector('.btn-collab-publish-prompt');
+    if (btnPublishPrompt) {
+      btnPublishPrompt.addEventListener('click', () => openPublishNowModal(p));
+    }
+
+    container.appendChild(card);
+  });
+}
+
+async function handleAcceptProposal(proposta) {
+  const myId = currentOrganizerData?.id || currentUser?.uid || '';
+  const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || 'Organizzatore').trim();
+  const myEntry = findMyPartnerEntry(proposta, myId, myNome);
+
+  if (!myEntry) {
+    showToast('Impossibile individuare il tuo account tra i partner della proposta.', 'error');
+    return;
+  }
+
+  const [partnerKey, partnerVal] = myEntry;
+
+  try {
+    showToast('Accettazione della collaborazione in corso...', 'info');
+
+    // 1. Update partner status in proposta
+    const partnerRef = ref(db, `proposte_collaborazione/${proposta.idProposta}/partner/${partnerKey}`);
+    await update(partnerRef, {
+      stato: 'ACCETTATA',
+      dataRisposta: Date.now()
+    });
+
+    // 2. Notify creator
+    const notifId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const notifica = {
+      idNotifica: notifId,
+      tipo: 'COLLAB_ACCETTATA',
+      idProposta: proposta.idProposta,
+      idEvento: proposta.evento?.id || proposta.idProposta,
+      titoloEvento: proposta.evento?.titolo || '',
+      nomeMittente: myNome,
+      messaggio: `${myNome} ha accettato la collaborazione per l'evento '${proposta.evento?.titolo}'!`,
+      timestamp: Date.now(),
+      letta: false
+    };
+
+    if (proposta.idCreatore) {
+      try {
+        await set(ref(db, `notifiche_organizzatori/${proposta.idCreatore}/${notifId}`), notifica);
+      } catch (err) {
+        console.warn('Errore notifica accettazione:', err);
+      }
+    }
+
+    // 3. Check if all partners answered
+    const snapshot = await get(ref(db, `proposte_collaborazione/${proposta.idProposta}`));
+    if (snapshot.exists()) {
+      const updatedProp = snapshot.val();
+      const partnersMap = updatedProp.partner || {};
+      const allAnswered = Object.values(partnersMap).every((part) => part.stato !== 'IN_ATTESA');
+
+      if (allAnswered) {
+        await publishProposalEvent(updatedProp);
+      }
+    }
+
+    showToast(`Hai accettato la collaborazione per "${proposta.evento?.titolo}"!`, 'success');
+
+    // Close detail modal if open
+    const modalDetail = document.getElementById('modalCollabDetail');
+    if (modalDetail) modalDetail.classList.add('hidden');
+
+  } catch (err) {
+    console.error('Errore accettazione proposta:', err);
+    showToast('Errore durante l\'accettazione: ' + err.message, 'error');
+  }
+}
+
+async function handleRejectProposal(proposta) {
+  if (!confirm(`Sei sicuro di voler rifiutare la collaborazione per l'evento "${proposta.evento?.titolo}"?`)) {
+    return;
+  }
+
+  const myId = currentOrganizerData?.id || currentUser?.uid || '';
+  const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || 'Organizzatore').trim();
+  const myEntry = findMyPartnerEntry(proposta, myId, myNome);
+
+  if (!myEntry) {
+    showToast('Impossibile individuare il tuo account tra i partner della proposta.', 'error');
+    return;
+  }
+
+  const [partnerKey, partnerVal] = myEntry;
+
+  try {
+    showToast('Rifiuto della proposta in corso...', 'info');
+
+    // 1. Update partner status in proposta
+    const partnerRef = ref(db, `proposte_collaborazione/${proposta.idProposta}/partner/${partnerKey}`);
+    await update(partnerRef, {
+      stato: 'RIFIUTATA',
+      dataRisposta: Date.now()
+    });
+
+    // 2. Notify creator
+    const notifId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+    const notifica = {
+      idNotifica: notifId,
+      tipo: 'COLLAB_RIFIUTATA',
+      idProposta: proposta.idProposta,
+      idEvento: proposta.evento?.id || proposta.idProposta,
+      titoloEvento: proposta.evento?.titolo || '',
+      nomeMittente: myNome,
+      messaggio: `${myNome} ha rifiutato la collaborazione per l'evento '${proposta.evento?.titolo}'.`,
+      timestamp: Date.now(),
+      letta: false
+    };
+
+    if (proposta.idCreatore) {
+      try {
+        await set(ref(db, `notifiche_organizzatori/${proposta.idCreatore}/${notifId}`), notifica);
+      } catch (err) {
+        console.warn('Errore notifica rifiuto:', err);
+      }
+    }
+
+    // 3. Check if all partners answered
+    const snapshot = await get(ref(db, `proposte_collaborazione/${proposta.idProposta}`));
+    if (snapshot.exists()) {
+      const updatedProp = snapshot.val();
+      const partnersMap = updatedProp.partner || {};
+      const allAnswered = Object.values(partnersMap).every((part) => part.stato !== 'IN_ATTESA');
+
+      if (allAnswered) {
+        await publishProposalEvent(updatedProp);
+      }
+    }
+
+    showToast(`Hai rifiutato la collaborazione per "${proposta.evento?.titolo}".`, 'info');
+
+    // Close detail modal if open
+    const modalDetail = document.getElementById('modalCollabDetail');
+    if (modalDetail) modalDetail.classList.add('hidden');
+
+  } catch (err) {
+    console.error('Errore rifiuto proposta:', err);
+    showToast('Errore durante l\'operazione: ' + err.message, 'error');
+  }
+}
+
+async function publishProposalEvent(proposta) {
+  const eventId = proposta.evento?.id || proposta.idProposta;
+  const partnersMap = proposta.partner || {};
+
+  const accepted = Object.values(partnersMap).filter((p) => p.stato === 'ACCETTATA');
+  const finalIdCoOrg = accepted.map((p) => p.idEnte).filter(Boolean);
+  const finalNomeCoOrg = accepted.map((p) => p.nomeEnte).filter(Boolean);
+
+  const publishedEvent = {
+    ...proposta.evento,
+    id: eventId,
+    idCoOrganizzatori: finalIdCoOrg,
+    coOrganizzatori: finalNomeCoOrg
+  };
+
+  // 1. Write to /eventi/{id}
+  await set(ref(db, `eventi/${eventId}`), publishedEvent);
+
+  // 2. Update proposta statoGlobale to "PUBBLICATA"
+  await update(ref(db, `proposte_collaborazione/${proposta.idProposta}`), {
+    statoGlobale: 'PUBBLICATA'
+  });
+
+  // 3. Send notification to creator
+  const notifPubbId = 'notif_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+  const msgPubb = finalNomeCoOrg.length > 0
+    ? `Tutti i partner hanno risposto! Il tuo evento '${publishedEvent.titolo}' è stato pubblicato in collaborazione.`
+    : `Le risposte dei partner sono terminate. Il tuo evento '${publishedEvent.titolo}' è stato pubblicato come evento singolo.`;
+
+  const notificaPubb = {
+    idNotifica: notifPubbId,
+    tipo: 'COLLAB_PUBBLICATA',
+    idProposta: proposta.idProposta,
+    idEvento: eventId,
+    titoloEvento: publishedEvent.titolo,
+    nomeMittente: 'Sistema Rook',
+    messaggio: msgPubb,
+    timestamp: Date.now(),
+    letta: false
+  };
+
+  if (proposta.idCreatore) {
+    try {
+      await set(ref(db, `notifiche_organizzatori/${proposta.idCreatore}/${notifPubbId}`), notificaPubb);
+    } catch (err) {
+      console.warn('Errore notifica pubblicazione:', err);
+    }
+  }
+}
+
+function openPublishNowModal(proposta) {
+  proposalForPublishNow = proposta;
+  const modal = document.getElementById('modalConfirmPublishNowCollab');
+  if (modal) modal.classList.remove('hidden');
+}
+
+function openCancelModal(proposta) {
+  proposalForCancel = proposta;
+  const modal = document.getElementById('modalConfirmCancelCollab');
+  if (modal) modal.classList.remove('hidden');
+}
+
+async function executePublishNow() {
+  if (!proposalForPublishNow) return;
+  const p = proposalForPublishNow;
+  const modal = document.getElementById('modalConfirmPublishNowCollab');
+  const btnConfirm = document.getElementById('btnConfirmPublishNowCollab');
+  const originalHtml = btnConfirm ? btnConfirm.innerHTML : '';
+
+  try {
+    if (btnConfirm) {
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Pubblicazione...`;
+    }
+
+    const eventId = p.evento?.id || p.idProposta;
+    const partnersMap = p.partner || {};
+    const accepted = Object.values(partnersMap).filter((part) => part.stato === 'ACCETTATA');
+    const finalIdCoOrg = accepted.map((part) => part.idEnte).filter(Boolean);
+    const finalNomeCoOrg = accepted.map((part) => part.nomeEnte).filter(Boolean);
+
+    const publishedEvent = {
+      ...p.evento,
+      id: eventId,
+      idCoOrganizzatori: finalIdCoOrg,
+      coOrganizzatori: finalNomeCoOrg
+    };
+
+    await set(ref(db, `eventi/${eventId}`), publishedEvent);
+    await update(ref(db, `proposte_collaborazione/${p.idProposta}`), {
+      statoGlobale: 'PUBBLICATA'
+    });
+
+    showToast(`Evento "${publishedEvent.titolo}" pubblicato con successo con ${accepted.length} partner!`, 'success');
+    if (modal) modal.classList.add('hidden');
+    proposalForPublishNow = null;
+
+  } catch (err) {
+    console.error('Errore pubblicazione anticipata:', err);
+    showToast('Errore durante la pubblicazione: ' + err.message, 'error');
+  } finally {
+    if (btnConfirm) {
+      btnConfirm.disabled = false;
+      btnConfirm.innerHTML = originalHtml;
+    }
+  }
+}
+
+async function executeCancelProposal() {
+  if (!proposalForCancel) return;
+  const p = proposalForCancel;
+  const modal = document.getElementById('modalConfirmCancelCollab');
+  const btnConfirm = document.getElementById('btnConfirmCancelCollab');
+  const originalHtml = btnConfirm ? btnConfirm.innerHTML : '';
+
+  try {
+    if (btnConfirm) {
+      btnConfirm.disabled = true;
+      btnConfirm.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Annullamento...`;
+    }
+
+    await update(ref(db, `proposte_collaborazione/${p.idProposta}`), {
+      statoGlobale: 'ANNULLATA'
+    });
+
+    showToast(`Proposta per "${p.evento?.titolo}" annullata.`, 'info');
+    if (modal) modal.classList.add('hidden');
+    proposalForCancel = null;
+
+  } catch (err) {
+    console.error('Errore annullamento proposta:', err);
+    showToast('Errore durante l\'annullamento: ' + err.message, 'error');
+  } finally {
+    if (btnConfirm) {
+      btnConfirm.disabled = false;
+      btnConfirm.innerHTML = originalHtml;
+    }
+  }
+}
+
+function openCollabDetailModal(proposta, isReceivedTab) {
+  currentProposalForModal = proposta;
+  const modal = document.getElementById('modalCollabDetail');
+  const body = document.getElementById('collabModalBody');
+  const footer = document.getElementById('collabModalFooter');
+  if (!modal || !body || !footer) return;
+
+  const ev = proposta.evento || {};
+  const myId = currentOrganizerData?.id || currentUser?.uid || '';
+  const myNome = (currentOrganizerData?.nomeEnte || currentUser?.displayName || '').trim();
+  const myEntry = findMyPartnerEntry(proposta, myId, myNome);
+  const mioStato = myEntry ? myEntry[1]?.stato || 'IN_ATTESA' : 'IN_ATTESA';
+
+  const dateFormatted = formatEventDate(ev);
+  const coverUrl = ev.immagineCopertina;
+  const menuUrl = ev.immagineMenu;
+  const isFood = isCategoriaCibo(ev.categoria);
+
+  const partnersList = Object.values(proposta.partner || {});
+
+  body.innerHTML = `
+    <div class="collab-modal-layout">
+      ${coverUrl ? `<img src="${escapeHtml(coverUrl)}" class="collab-modal-banner" alt="Copertina Evento" />` : ''}
+
+      <div class="collab-modal-meta-grid">
+        <div class="collab-modal-meta-item">
+          <span class="label">Titolo Evento</span>
+          <span class="value">${escapeHtml(ev.titolo || '')}</span>
+        </div>
+        <div class="collab-modal-meta-item">
+          <span class="label">Organizzatore Principale</span>
+          <span class="value" style="color: var(--primary);"><i class="fa-solid fa-building"></i> ${escapeHtml(proposta.nomeCreatore || '')}</span>
+        </div>
+        <div class="collab-modal-meta-item">
+          <span class="label">Categoria</span>
+          <span class="value">${escapeHtml(ev.categoria || '')}</span>
+        </div>
+        <div class="collab-modal-meta-item">
+          <span class="label">Data / Periodo</span>
+          <span class="value">${escapeHtml(dateFormatted)}</span>
+        </div>
+        <div class="collab-modal-meta-item">
+          <span class="label">Luogo & Indirizzo</span>
+          <span class="value">${escapeHtml(ev.luogo || 'Non specificato')}</span>
+        </div>
+        <div class="collab-modal-meta-item">
+          <span class="label">Accessibilità & Caratteristiche</span>
+          <span class="value">
+            ${ev.accessibileDisabili ? '<span style="color: #3b82f6;"><i class="fa-solid fa-wheelchair"></i> Disabili OK</span>' : 'Nessuna specifica'}
+            ${ev.opzioniVeg ? ' • <span style="color: #10b981;"><i class="fa-solid fa-seedling"></i> Vegano/Veg</span>' : ''}
+          </span>
+        </div>
+      </div>
+
+      <div class="collab-modal-desc-box">
+        <h5>Descrizione Evento</h5>
+        <p>${escapeHtml(ev.descrizione || 'Nessuna descrizione disponibile.')}</p>
+      </div>
+
+      ${menuUrl ? `
+        <div class="collab-modal-desc-box">
+          <h5>${isFood ? 'Menu Gastronomico' : 'Programma dell\'Evento'}</h5>
+          <img src="${escapeHtml(menuUrl)}" class="collab-modal-menu-preview" alt="Menu o Programma" />
+        </div>
+      ` : ''}
+
+      <div class="collab-modal-partners-box">
+        <h5>Stato Adesione Co-Organizzatori (${partnersList.length})</h5>
+        <div class="collab-modal-partners-list">
+          ${partnersList.map((partner) => {
+            const initial = (partner.nomeEnte || 'P').charAt(0).toUpperCase();
+            let pBadge = '';
+            if (partner.stato === 'ACCETTATA') {
+              pBadge = `<span class="badge-collab-status badge-accettata"><i class="fa-solid fa-check"></i> Accettata</span>`;
+            } else if (partner.stato === 'RIFIUTATA') {
+              pBadge = `<span class="badge-collab-status badge-rifiutata"><i class="fa-solid fa-xmark"></i> Rifiutata</span>`;
+            } else {
+              pBadge = `<span class="badge-collab-status badge-in-attesa"><i class="fa-solid fa-clock"></i> In Attesa</span>`;
+            }
+
+            return `
+              <div class="collab-modal-partner-card">
+                <div class="collab-modal-partner-info">
+                  <div class="collab-modal-partner-avatar">${escapeHtml(initial)}</div>
+                  <div>
+                    <strong style="font-size: 0.88rem; color: var(--text-main);">${escapeHtml(partner.nomeEnte || 'Organizzatore')}</strong>
+                    ${partner.dataRisposta ? `<div style="font-size: 0.72rem; color: #94a3b8;">Risposta il ${new Date(partner.dataRisposta).toLocaleDateString('it-IT')}</div>` : ''}
+                  </div>
+                </div>
+                ${pBadge}
+              </div>
+            `;
+          }).join('')}
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Configure modal footer buttons
+  footer.innerHTML = '';
+  const btnClose = document.createElement('button');
+  btnClose.className = 'btn btn-secondary';
+  btnClose.setAttribute('data-close-modal', 'modalCollabDetail');
+  btnClose.textContent = 'Chiudi';
+  btnClose.addEventListener('click', () => modal.classList.add('hidden'));
+
+  if (isReceivedTab && mioStato === 'IN_ATTESA') {
+    const btnReject = document.createElement('button');
+    btnReject.className = 'btn btn-outline-danger';
+    btnReject.innerHTML = `<i class="fa-solid fa-xmark"></i> Rifiuta Collaborazione`;
+    btnReject.addEventListener('click', () => handleRejectProposal(proposta));
+
+    const btnAccept = document.createElement('button');
+    btnAccept.className = 'btn btn-success';
+    btnAccept.innerHTML = `<i class="fa-solid fa-check"></i> Accetta Collaborazione`;
+    btnAccept.addEventListener('click', () => handleAcceptProposal(proposta));
+
+    footer.appendChild(btnReject);
+    footer.appendChild(btnAccept);
+  } else if (!isReceivedTab && proposta.statoGlobale === 'IN_ATTESA') {
+    const btnCancel = document.createElement('button');
+    btnCancel.className = 'btn btn-outline-danger';
+    btnCancel.innerHTML = `<i class="fa-solid fa-ban"></i> Annulla Proposta`;
+    btnCancel.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      openCancelModal(proposta);
+    });
+
+    const btnPublish = document.createElement('button');
+    btnPublish.className = 'btn btn-primary';
+    btnPublish.innerHTML = `<i class="fa-solid fa-rocket"></i> Pubblica Subito`;
+    btnPublish.addEventListener('click', () => {
+      modal.classList.add('hidden');
+      openPublishNowModal(proposta);
+    });
+
+    footer.appendChild(btnCancel);
+    footer.appendChild(btnPublish);
+  }
+
+  footer.appendChild(btnClose);
+  modal.classList.remove('hidden');
+}
+
+function setupCollaborationsModule() {
+  const btnTabReceived = document.getElementById('btnCollabTabReceived');
+  const btnTabSent = document.getElementById('btnCollabTabSent');
+  const searchInput = document.getElementById('searchCollabInput');
+  const btnNewCollab = document.getElementById('btnNewCollabEvent');
+
+  if (btnTabReceived) {
+    btnTabReceived.addEventListener('click', () => {
+      currentActiveCollabTab = 'received';
+      btnTabReceived.classList.add('active');
+      if (btnTabSent) btnTabSent.classList.remove('active');
+      renderOrganizerCollaborations();
+    });
+  }
+
+  if (btnTabSent) {
+    btnTabSent.addEventListener('click', () => {
+      currentActiveCollabTab = 'sent';
+      btnTabSent.classList.add('active');
+      if (btnTabReceived) btnTabReceived.classList.remove('active');
+      renderOrganizerCollaborations();
+    });
+  }
+
+  if (searchInput) {
+    searchInput.addEventListener('input', (e) => {
+      collabSearchFilter = e.target.value.trim();
+      renderOrganizerCollaborations();
+    });
+  }
+
+  if (btnNewCollab) {
+    btnNewCollab.addEventListener('click', () => {
+      const createNav = document.querySelector('[data-target="view-org-create-event"]');
+      if (createNav) createNav.click();
+      const partnerSearch = document.getElementById('cePartnerSearch');
+      if (partnerSearch) {
+        partnerSearch.scrollIntoView({ behavior: 'smooth' });
+        partnerSearch.focus();
+      }
+    });
+  }
+
+  // Modals confirm buttons
+  const btnConfirmPublish = document.getElementById('btnConfirmPublishNowCollab');
+  if (btnConfirmPublish) {
+    btnConfirmPublish.addEventListener('click', executePublishNow);
+  }
+
+  const btnConfirmCancel = document.getElementById('btnConfirmCancelCollab');
+  if (btnConfirmCancel) {
+    btnConfirmCancel.addEventListener('click', executeCancelProposal);
+  }
+}
+setupCollaborationsModule();
 
 // ───────────────────────────────────────────────
 // D) My Events Module
